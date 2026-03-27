@@ -1,0 +1,12 @@
+io
+datetime
+streamlit
+pandas
+requests
+webbrowser
+numpy
+FinanceDataReader
+matplotlib.pyplot
+scipy.signal
+matplotlib.gridspec
+matplotlib
