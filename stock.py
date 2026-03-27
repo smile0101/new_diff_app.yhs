@@ -114,6 +114,7 @@ if not ts.empty:
 
 ###################################################################################
 @st.cache_data(ttl=6000)  # 텍스트 정보이므로 1시간 정도 캐시해도 무방
+
 def get_thinkpool_data(code):
     chrome_options = Options()
     chrome_options.add_argument('--headless')  # GUI 없이 실행
@@ -122,8 +123,12 @@ def get_thinkpool_data(code):
     chrome_options.add_argument('user-agent=Mozilla/5.0')
 
     # 드라이버 실행 (자동 설치 및 설정)
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    try : 
+        service = Service("/usr/bin/chromedriver")
+        driver = webdriver.Chrome(service=service, options=chrome_options)
+    except:
+        from webdriver_manager.chrome import ChromeDriverManager
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     driver.implicitly_wait(2)
     try:
         url = f'https://www.thinkpool.com/item/{code}'
