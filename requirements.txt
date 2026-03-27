@@ -4,3 +4,4 @@ requests
 numpy
 finance-datareader
 matplotlib
+scipy
