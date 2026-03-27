@@ -1,12 +1,8 @@
-io
-datetime
 streamlit
 pandas
-requests
-webbrowser
+FinanceDataReader
+selenium
+webdriver-manager
 numpy
-finance-datareader
-matplotlib.pyplot
-scipy.signal
-matplotlib.gridspec
+scipy
 matplotlib
