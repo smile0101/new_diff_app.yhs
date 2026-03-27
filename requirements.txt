@@ -1,7 +1,12 @@
+io
+datetime
 streamlit
 pandas
 requests
+webbrowser
 numpy
 finance-datareader
+matplotlib.pyplot
+scipy.signal
+matplotlib.gridspec
 matplotlib
-scipy
