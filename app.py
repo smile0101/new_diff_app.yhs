@@ -15,7 +15,7 @@ from matplotlib import font_manager, rc
 # 페이지 설정
 st.set_page_config(page_icon="♥", page_title="증시그래프", layout="wide")
 
-st.title("📊 증시 대시보드")
+st.title("📊 증시")
 
 # 이미지 데이터 딕셔너리
 keys = {
@@ -508,12 +508,12 @@ bb, gg = st.columns([2, 2])
 
 with bb:
     d = bit()
-    fig = graph_n('비트코인',d)
+    fig = graph_n('Bit',d)
     st.pyplot(fig)
 
 with gg:
     go = Gold()
-    fig = graph_n('골드',go)
+    fig = graph_n('Gold',go)
     st.pyplot(fig)
 
 K = 2
