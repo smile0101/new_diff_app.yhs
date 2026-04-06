@@ -31,10 +31,10 @@ for idx, row in df.iterrows():
         url = f'https://www.thinkpool.com/item/{code}'
         link_tag = f'<a href="{url}" target="_blank" style="text-decoration: none; color: #3498db; font-weight: bold;">link</a>'
         goo = f"https://news.google.com/search?q={quote(item)}&hl=ko&gl=KR&ceid=KR:ko"
-        google = f'<a href="{goo}" target="_blank" style="text-decoration: none; color: #3498db; font-weight: bold;">구굴</a>'
+        google = f'<a href="{goo}" target="_blank" style="text-decoration: none; color: #3498db; font-weight: bold;">구글</a>'
 
         results.append({
-            'item': row['item'], 'code': code, 'Target': target, '현재': curr,
+            'item': row['item'], 'Target': target, '현재': curr,
             '비율': ratio, '오늘': c1, '어제': c2, '그제': c3, '4일': c4, '5일': c5,
             '1주': w_sum, 'HH': hh, 'LL': ll, 'Rank': row['Rank'], 
             'link': link_tag, '구글' : google, 'Memo': row['Memo']
