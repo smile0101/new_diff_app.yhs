@@ -6,7 +6,7 @@ from urllib.parse import quote
 
 
 st.set_page_config(layout="wide")
-df = pd.read_excel(r'C:\Doc\Target.xlsx', dtype={'code': str})
+df = pd.read_excel('Target.xlsx', dtype={'code': str})
 
 results = []
 for idx, row in df.iterrows():
