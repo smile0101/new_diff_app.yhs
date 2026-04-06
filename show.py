@@ -248,3 +248,5 @@ with ss1:
     st.link_button(label=' Think', url= f'https://www.thinkpool.com/item/{code}')
 with ss2:
     st.link_button(label=' Naver ', url= f'https://m.stock.naver.com/domestic/stock/{code}/analysis')
+with ss3:
+    st.link_button(label=' Tr', url= f'https://kr.tradingview.com/chart/Y3Tq45pg/?symbol=KRX%3A{code}')
