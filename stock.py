@@ -159,7 +159,7 @@ if kk == 2 :
         sub_left, sub_mid, sub_right = st.columns([1, 2, 1])
     
         with sub_mid:
-            st.link_button(label=Think, url=url)
+            st.link_button(label='Think', url=url)
             st.write(f'{CC}')
             
 ###################################################################################
