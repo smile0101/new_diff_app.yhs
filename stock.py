@@ -113,45 +113,55 @@ if not ts.empty:
     changes = [ts['Change'].iloc[-1] * 100, ts['Change'].iloc[-2] * 100, ts['Change'].iloc[-3] * 100]
 
 ###################################################################################
-@st.cache_data(ttl=6000)  # 텍스트 정보이므로 1시간 정도 캐시해도 무방
-
-def get_thinkpool_data(code):
-    chrome_options = Options()
-    chrome_options.add_argument('--headless')  # GUI 없이 실행
-    chrome_options.add_argument('--window-size=1920x1080')
-    chrome_options.add_argument('--disable-gpu')
-    chrome_options.add_argument('user-agent=Mozilla/5.0')
-
-    # 드라이버 실행 (자동 설치 및 설정)
-    try : 
-        service = Service("/usr/bin/chromedriver")
-        driver = webdriver.Chrome(service=service, options=chrome_options)
-    except:
-        from webdriver_manager.chrome import ChromeDriverManager
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-    driver.implicitly_wait(2)
-    try:
-        url = f'https://www.thinkpool.com/item/{code}'
-        driver.get(url)
-        element1 = driver.find_element(By.CSS_SELECTOR, '#content > div > div.sub-content > div > div > div.left > div:nth-child(1) > a:nth-child(1) > div > strong')
-        return element1.text, url
-    except:
-        return None, None
-    finally:
-        driver.quit()
-
-el1, url = get_thinkpool_data(code)
-# 6. 결과 표시 (두 번째 컬럼: 값 표시)
-if el1:
+kk = 2
+if kk == 1 :
+    @st.cache_data(ttl=6000)  # 텍스트 정보이므로 1시간 정도 캐시해도 무방
+    
+    def get_thinkpool_data(code):
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')  # GUI 없이 실행
+        chrome_options.add_argument('--window-size=1920x1080')
+        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument('user-agent=Mozilla/5.0')
+    
+        # 드라이버 실행 (자동 설치 및 설정)
+        try : 
+            service = Service("/usr/bin/chromedriver")
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+        except:
+            from webdriver_manager.chrome import ChromeDriverManager
+            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+        driver.implicitly_wait(2)
+        try:
+            url = f'https://www.thinkpool.com/item/{code}'
+            driver.get(url)
+            element1 = driver.find_element(By.CSS_SELECTOR, '#content > div > div.sub-content > div > div > div.left > div:nth-child(1) > a:nth-child(1) > div > strong')
+            return element1.text, url
+        except:
+            return None, None
+        finally:
+            driver.quit()
+    
+    el1, url = get_thinkpool_data(code)
+    # 6. 결과 표시 (두 번째 컬럼: 값 표시)
+    if el1:
+        with cool[1]:
+            sub_left, sub_mid, sub_right = st.columns([1, 2, 1])
+    
+            with sub_mid:
+                st.link_button(label=el1, url=url)
+                st.write(f'{CC}')
+    else:
+        cool[1].info("데이터 없음")
+if kk == 2 :
+    url = f'https://www.thinkpool.com/item/{code}'
     with cool[1]:
         sub_left, sub_mid, sub_right = st.columns([1, 2, 1])
-
+    
         with sub_mid:
-            st.link_button(label=el1, url=url)
+            st.link_button(label=Think, url=url)
             st.write(f'{CC}')
-else:
-    cool[1].info("데이터 없음")
-
+            
 ###################################################################################
 with cool[2]:
     sub1, sub2, sub3 = st.columns([1, 1, 1])
