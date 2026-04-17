@@ -7,3 +7,5 @@ numpy
 scipy
 matplotlib
 openpyxl
+lxml
+html5lib
