@@ -65,8 +65,8 @@ for i, (code, item) in enumerate(zip(codes, items)):
 # 결과 저장 및 출력
 results_df = pd.DataFrame(results)
 if not results_df.empty:
-    # results_df.to_json('find.json', orient='records', force_ascii=False, indent=4)
+    results_df.to_json('find.json', orient='records', force_ascii=False, indent=4)
     st.success(f"✅ 분석 완료! 총 {len(results)} 종목")
-    st.dataframe(results_df)
+    # st.dataframe(results_df)
 else:
     st.info("없음.")
