@@ -117,14 +117,12 @@ def fetch_supply_data(stock_name, stock_code, excel_df_json):
 ########## ── MongoDB Atlas 연결 (직접 URL 입력) ──
     MONGO_URL  = st.secrets["mongo_uri"]
     try:
-        
         with MongoClient(
     MONGO_URL,
     serverSelectionTimeoutMS=5000,
     tls=True,
     tlsCAFile=certifi.where(),
-    # ssl_cert_reqs='CERT_NONE' -> 이 줄을 아래와 같이 변경합니다.
-    tlsAllowInvalidCertificates=True 
+    ssl_cert_reqs='CERT_NONE'
 ) as client:
     
             col   = client.forin.stocks
