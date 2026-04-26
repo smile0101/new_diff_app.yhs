@@ -119,12 +119,13 @@ def fetch_supply_data(stock_name, stock_code, excel_df_json):
 # ─────────────────────────────────────────
     MONGO_URL  = st.secrets["mongo_uri"]
     try:
-            MONGO_URL,
-    serverSelectionTimeoutMS=5000,
-    tls=True,
-    tlsInsecure=True
-) as client:
-   
+        with MongoClient(
+        MONGO_URL,
+        serverSelectionTimeoutMS=5000,
+        tls=True,
+        tlsInsecure=True
+    ) as client:
+
             col   = client.forin.stocks
             db_df = pd.DataFrame(col.find({"종목명": stock_name}, {"_id": 0}))
     except Exception as e:
