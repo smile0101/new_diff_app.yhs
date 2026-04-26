@@ -9,7 +9,6 @@ matplotlib
 openpyxl
 lxml
 html5lib
-pymongo[srv]
+pymongo[srv]==4.6.3
 dnspython
 certifi
-pyopenssl
