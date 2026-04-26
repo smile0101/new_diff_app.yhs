@@ -114,16 +114,19 @@ def fetch_supply_data(stock_name, stock_code, excel_df_json):
     info1 = f"{m_rank}위/ {amm}천억"
     info3 = f"외인:{FO}/기관:{GV}/개인:{IN}(보유:{FC})"
 
-    # ── MongoDB Atlas 연결 (직접 URL 입력) ──
+########## ── MongoDB Atlas 연결 (직접 URL 입력) ──
     MONGO_URL  = st.secrets["mongo_uri"]
     try:
+        
         with MongoClient(
-            MONGO_URL,
-            serverSelectionTimeoutMS=5000,
-            tls=True,
-            tlsCAFile=certifi.where(),
-            ssl_cert_reqs='CERT_NONE'
-        ) as client:
+    MONGO_URL,
+    serverSelectionTimeoutMS=5000,
+    tls=True,
+    tlsCAFile=certifi.where(),
+    # ssl_cert_reqs='CERT_NONE' -> 이 줄을 아래와 같이 변경합니다.
+    tlsAllowInvalidCertificates=True 
+) as client:
+    
             col   = client.forin.stocks
             db_df = pd.DataFrame(col.find({"종목명": stock_name}, {"_id": 0}))
     except Exception as e:
