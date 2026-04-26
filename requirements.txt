@@ -9,3 +9,6 @@ matplotlib
 openpyxl
 lxml
 html5lib
+pymongo
+dnspython
+certifi
