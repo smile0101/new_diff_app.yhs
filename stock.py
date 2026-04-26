@@ -43,7 +43,7 @@ def color_format(val):
 # ─────────────────────────────────────────
 # 엑셀 읽기 / 쓰기
 # ─────────────────────────────────────────
-EXCEL_FILE = r'C:\Doc\stock.xlsx'
+EXCEL_FILE = 'stock.xlsx'
 
 @st.cache_data
 def load_excel():
