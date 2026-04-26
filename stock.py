@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import streamlit as st
 import FinanceDataReader as fdr
 from urllib.parse import quote
+import certifi  
 
 matplotlib.rcParams['font.family'] = 'Malgun Gothic'
 matplotlib.rcParams['axes.unicode_minus'] = False
