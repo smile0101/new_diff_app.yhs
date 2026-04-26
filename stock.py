@@ -75,6 +75,7 @@ def save_data(category, stock_name, value):
 # ─────────────────────────────────────────
 @st.cache_data(ttl=6000)
 def fetch_supply_data(stock_name, stock_code, excel_df_json):
+    import certifi
     excel_df = pd.read_json(StringIO(excel_df_json), dtype={'종목코드': str})
 
     # ── 네이버 수급 데이터 ──────────────────
