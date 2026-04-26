@@ -9,6 +9,7 @@ matplotlib
 openpyxl
 lxml
 html5lib
-pymongo
+pymongo[srv]
 dnspython
 certifi
+pyopenssl
