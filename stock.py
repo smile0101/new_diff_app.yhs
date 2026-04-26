@@ -159,6 +159,7 @@ def fetch_supply_data(stock_name, stock_code, excel_df_json):
 # 보유율 & 종가 그래프
 # ─────────────────────────────────────────
 def plot_stock_st(df, stock_name):
+    plt.rc('font', family='Malgun Gothic')
     fig, ax1 = plt.subplots(figsize=(10, 5))
     x = range(len(df))
 
