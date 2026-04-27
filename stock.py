@@ -7,7 +7,9 @@ import matplotlib.pyplot as plt
 import streamlit as st
 import FinanceDataReader as fdr
 from urllib.parse import quote
-import certifi  
+import certifi
+import platform
+import matplotlib.font_manager as fm
 
 matplotlib.rcParams['font.family'] = 'Malgun Gothic'
 matplotlib.rcParams['axes.unicode_minus'] = False
@@ -40,6 +42,23 @@ def custom_metric(label, main_val, sub_val, delta=None, delta_color="normal"):
 def color_format(val):
     color = "red" if val < 0 else "black"
     return f'<span style="color:{color}">{val:+.1f}%</span>'
+
+def set_korean_font():
+    system = platform.system()
+    
+    if system == 'Windows':
+        plt.rc('font', family='Malgun Gothic')
+        
+    elif system == 'Darwin':  # macOS
+        plt.rc('font', family='AppleGothic')
+        
+    else:  # Linux (서버, GitHub Actions 등)
+        # 나눔고딕 설치 필요: apt-get install -y fonts-nanum
+        font_path = '/usr/share/fonts/truetype/nanum/NanumGothic.ttf'
+        font = fm.FontProperties(fname=font_path)
+        plt.rc('font', family=font.get_name())
+
+    plt.rcParams['axes.unicode_minus'] = False  # 마이너스 기호 깨짐 방지
 
 # ─────────────────────────────────────────
 # 엑셀 읽기 / 쓰기
@@ -159,7 +178,7 @@ def fetch_supply_data(stock_name, stock_code, excel_df_json):
 # 보유율 & 종가 그래프
 # ─────────────────────────────────────────
 def plot_stock_st(df, stock_name):
-    plt.rc('font', family='Malgun Gothic')
+    set_korean_font()
     fig, ax1 = plt.subplots(figsize=(10, 5))
     x = range(len(df))
 
