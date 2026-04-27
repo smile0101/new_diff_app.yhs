@@ -11,7 +11,6 @@ import certifi
 import platform
 import matplotlib.font_manager as fm
 
-matplotlib.rcParams['font.family'] = 'Malgun Gothic'
 matplotlib.rcParams['axes.unicode_minus'] = False
 
 st.set_page_config(page_title="기본정보", layout="wide")
@@ -44,21 +43,21 @@ def color_format(val):
     return f'<span style="color:{color}">{val:+.1f}%</span>'
 
 def set_korean_font():
-    system = platform.system()
-    
-    if system == 'Windows':
-        plt.rc('font', family='Malgun Gothic')
-        
-    elif system == 'Darwin':  # macOS
-        plt.rc('font', family='AppleGothic')
-        
-    else:  # Linux (서버, GitHub Actions 등)
-        # 나눔고딕 설치 필요: apt-get install -y fonts-nanum
-        font_path = '/usr/share/fonts/truetype/nanum/NanumGothic.ttf'
-        font = fm.FontProperties(fname=font_path)
-        plt.rc('font', family=font.get_name())
+    plt.rcParams['axes.unicode_minus'] = False
 
-    plt.rcParams['axes.unicode_minus'] = False  # 마이너스 기호 깨짐 방지
+    font_path = '/tmp/NanumGothic.ttf'
+    font_url  = 'https://github.com/googlefonts/nanum-gothic/raw/main/fonts/ttf/NanumGothic.ttf'
+
+    # 폰트 파일이 없으면 GitHub에서 직접 다운로드
+    if not os.path.exists(font_path):
+        try:
+            urllib.request.urlretrieve(font_url, font_path)
+        except Exception as e:
+            print(f"폰트 다운로드 실패: {e}")
+            return
+
+    fm.fontManager.addfont(font_path)
+    plt.rc('font', family='NanumGothic')
 
 # ─────────────────────────────────────────
 # 엑셀 읽기 / 쓰기
