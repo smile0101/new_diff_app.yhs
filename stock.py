@@ -286,10 +286,36 @@ else:
 # ─────────────────────────────────────────
 url = f'https://www.thinkpool.com/item/{code}'
 with cool[1]:
-    _, sub_mid, _ = st.columns([1, 2, 1])
-    with sub_mid:
-        st.link_button(label='Think', url=url)
-        st.write(f'{CC}')
+    st.markdown(
+        """
+        <style>
+        .center-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center; }
+        .link-btn {
+            padding: 4px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-decoration: none;
+            color: inherit;     }
+        .link-btn:hover {
+            border-color: #888;
+            background-color: #f0f0f0;     }
+        </style>
+        """ +
+        f'<div class="center-box">'
+        f'<a href="{url}" target="_blank" class="link-btn">Think</a>'
+        f'<br>'
+        f'<span>{CC}</span>'
+        f'</div>',
+        unsafe_allow_html=True   )
+# with cool[1]:
+#     _, sub_mid, _ = st.columns([1, 2, 1])
+#     with sub_mid:
+#         st.link_button(label='Think', url=url)
+#         st.write(f'{CC}')
 
 # ─────────────────────────────────────────
 # 등락률 (그제 / 어제 / 오늘)
@@ -313,12 +339,6 @@ with cool[4]:
         f' &nbsp;&nbsp; '
         f'<a href="https://www.samsungpop.com/mbw/trading/domesticStock.do?cmd=stockInvestorList" target="_blank" style="padding:4px 10px; border:1px solid #ccc; border-radius:4px; text-decoration:none;">투자자</a>',
         unsafe_allow_html=True )
-# with cool[4]:
-#     ss1, ss2, ss3 = st.columns(3)
-#     ss1.link_button('Tr', f'https://kr.tradingview.com/chart/Y3Tq45pg/?symbol=KRX%3A{code}')
-#     ss2.link_button('Fn', f'https://comp.fnguide.com/SVO2/ASP/SVD_Main.asp?gicode=A{code}')
-#     ss3.link_button('Nv', f'https://m.stock.naver.com/domestic/stock/{code}/research')
-#     st.link_button('투자자', 'https://www.samsungpop.com/mbw/trading/domesticStock.do?cmd=stockInvestorList')
 
 # ─────────────────────────────────────────
 # 기준가 + 고저가 메트릭
