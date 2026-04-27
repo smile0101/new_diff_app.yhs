@@ -300,9 +300,10 @@ with cool[2]:
     # sub2.markdown(f"##### 어제  {color_format(changes[1])}", unsafe_allow_html=True)
     # sub3.markdown(f"##### 오늘  {color_format(changes[0])}", unsafe_allow_html=True)
     
-    st.markdown(f"##### 그제  {color_format(changes[2])}", unsafe_allow_html=True)
-    st.markdown(f"##### 어제  {color_format(changes[1])}", unsafe_allow_html=True)
-    st.markdown(f"##### 오늘  {color_format(changes[0])}", unsafe_allow_html=True)
+    st.markdown(
+        f"##### 그제 {color_format(changes[2])} &nbsp;&nbsp; 어제 {color_format(changes[1])} &nbsp;&nbsp; 오늘 {color_format(changes[0])}",
+        unsafe_allow_html=True
+    )
 
 with cool[3]:
     st.subheader(info1)
