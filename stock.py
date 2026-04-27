@@ -295,10 +295,14 @@ with cool[1]:
 # 등락률 (그제 / 어제 / 오늘)
 # ─────────────────────────────────────────
 with cool[2]:
-    sub1, sub2, sub3 = st.columns(3)
-    sub1.markdown(f"##### 그제  {color_format(changes[2])}", unsafe_allow_html=True)
-    sub2.markdown(f"##### 어제  {color_format(changes[1])}", unsafe_allow_html=True)
-    sub3.markdown(f"##### 오늘  {color_format(changes[0])}", unsafe_allow_html=True)
+    # sub1, sub2, sub3 = st.columns(3)
+    # sub1.markdown(f"##### 그제  {color_format(changes[2])}", unsafe_allow_html=True)
+    # sub2.markdown(f"##### 어제  {color_format(changes[1])}", unsafe_allow_html=True)
+    # sub3.markdown(f"##### 오늘  {color_format(changes[0])}", unsafe_allow_html=True)
+    
+    st.markdown(f"##### 그제  {color_format(changes[2])}", unsafe_allow_html=True)
+    st.markdown(f"##### 어제  {color_format(changes[1])}", unsafe_allow_html=True)
+    st.markdown(f"##### 오늘  {color_format(changes[0])}", unsafe_allow_html=True)
 
 with cool[3]:
     st.subheader(info1)
