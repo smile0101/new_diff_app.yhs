@@ -11,6 +11,7 @@ from urllib.parse import quote
 import certifi
 import platform
 import matplotlib.font_manager as fm
+import koreanize_matplotlib
 
 matplotlib.rcParams['axes.unicode_minus'] = False
 
