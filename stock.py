@@ -301,8 +301,8 @@ with cool[2]:
         unsafe_allow_html=True )
 
 with cool[3]:
-    st.subheader(info1)
-    st.markdown(f"<p style='font-size:16px;font-weight:bold;'>{info2}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='font-size:16px;font-weight:bold;'>{info1}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='font-size:13px;font-weight:bold;'>{info2}</p>", unsafe_allow_html=True)
 
 with cool[4]:
     st.markdown(
