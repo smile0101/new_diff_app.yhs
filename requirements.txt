@@ -12,3 +12,4 @@ html5lib
 pymongo[srv]==4.6.3
 dnspython
 certifi
+fonts-nanum
