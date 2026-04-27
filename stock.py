@@ -309,10 +309,10 @@ with cool[4]:
         f' &nbsp;&nbsp; '
         f'<a href="https://comp.fnguide.com/SVO2/ASP/SVD_Main.asp?gicode=A{code}" target="_blank" style="padding:4px 10px; border:1px solid #ccc; border-radius:4px; text-decoration:none;">Fn</a>'
         f' &nbsp;&nbsp; '
-        f'<a href="https://m.stock.naver.com/domestic/stock/{code}/research" target="_blank" style="padding:4px 10px; border:1px solid #ccc; border-radius:4px; text-decoration:none;">Nv</a>',
-        unsafe_allow_html=True
-    )
-        # st.link_button('투자자', 'https://www.samsungpop.com/mbw/trading/domesticStock.do?cmd=stockInvestorList')
+        f'<a href="https://m.stock.naver.com/domestic/stock/{code}/research" target="_blank" style="padding:4px 10px; border:1px solid #ccc; border-radius:4px; text-decoration:none;">Nv</a>'
+        f' &nbsp;&nbsp; '
+        f'<a href="https://www.samsungpop.com/mbw/trading/domesticStock.do?cmd=stockInvestorList" target="_blank" style="padding:4px 10px; border:1px solid #ccc; border-radius:4px; text-decoration:none;">투자자</a>',
+        unsafe_allow_html=True )
 # with cool[4]:
 #     ss1, ss2, ss3 = st.columns(3)
 #     ss1.link_button('Tr', f'https://kr.tradingview.com/chart/Y3Tq45pg/?symbol=KRX%3A{code}')
