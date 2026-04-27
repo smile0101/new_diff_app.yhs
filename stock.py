@@ -420,9 +420,10 @@ with tab1:
     
     st.dataframe(
         summary_df.style
-            .applymap(color_val)
+            .map(color_val)
             .format("{:,.0f}"),
-        use_container_width=True  )
+        use_container_width=True
+    )
 
 
     
