@@ -218,7 +218,7 @@ def update_stock():
 # ─────────────────────────────────────────
 # Selectbox
 # ─────────────────────────────────────────
-cool = st.columns([2, 1.5, 2.8, 2, 2.5])
+cool = st.columns([2, 1.5, 2 , 2, 2.5])
 
 try:
     current_index = df['종목명'].tolist().index(st.session_state['selected_name'])
