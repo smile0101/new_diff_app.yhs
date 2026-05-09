@@ -77,22 +77,35 @@ def save_excel(df):
     st.cache_data.clear()
 
 def save_data(category, stock_name, value):
-    st.cache_data.clear()          # 읽기 전에 캐시 먼저 클리어
-    df = load_excel()              # 최신 엑셀 읽기
+    # 파일에서 직접 읽기 (캐시 우회)
+    df_fresh = pd.read_excel(EXCEL_FILE, dtype={'종목코드': str})
+    df_fresh['기준값'] = df_fresh['기준값'].fillna(0).astype(int)
+    df_fresh['Memo']  = df_fresh['Memo'].fillna('')
+    if '관심' not in df_fresh.columns:
+        df_fresh['관심'] = 0
+    df_fresh['관심'] = df_fresh['관심'].fillna(0).astype(int)
+
     if category == "ref_prices":
         try:
             value = int(float(value)) if str(value).replace('.', '', 1).isdigit() else 0
         except (ValueError, TypeError):
             value = 0
-        df.loc[df['종목명'] == stock_name, '기준값'] = value
+        df_fresh.loc[df_fresh['종목명'] == stock_name, '기준값'] = value
     elif category == "memos":
-        df.loc[df['종목명'] == stock_name, 'Memo'] = value
+        df_fresh.loc[df_fresh['종목명'] == stock_name, 'Memo'] = value
     elif category == "interest":
-        if '관심' not in df.columns:
-            df['관심'] = 0
-        df.loc[df['종목명'] == stock_name, '관심'] = int(value)
-    save_excel(df)                 # 저장 (내부에서 cache_data.clear() 재실행)
+        df_fresh.loc[df_fresh['종목명'] == stock_name, '관심'] = int(value)
+
+    df_fresh.to_excel(EXCEL_FILE, index=False)  # 파일에 직접 저장
+    st.cache_data.clear()                        # 캐시 클리어
     st.toast(f"'{stock_name}' 저장 완료!", icon="💾")
+
+# ─────────────────────────────────────────
+# 관심 슬라이더 콜백
+# ─────────────────────────────────────────
+def on_interest_change():
+    new_val = st.session_state[f"interest_{st.session_state['selected_name']}"]
+    save_data("interest", st.session_state['selected_name'], new_val)
 
 # ─────────────────────────────────────────
 # 통합 수급 함수
@@ -101,7 +114,6 @@ def save_data(category, stock_name, value):
 def fetch_supply_data(stock_name, stock_code, excel_df_json):
     excel_df = pd.read_json(StringIO(excel_df_json), dtype={'종목코드': str})
 
-    # ── 네이버 수급 데이터 ──────────────────
     headers = {"User-Agent": "Mozilla/5.0"}
     res = requests.get(
         f'https://finance.naver.com/item/frgn.naver?code={stock_code}',
@@ -124,7 +136,6 @@ def fetch_supply_data(stock_name, stock_code, excel_df_json):
 
     dk = fk.head(10).reset_index(drop=True)
 
-    # ── 수급 요약 정보 ──────────────────────
     target = excel_df[excel_df['종목코드'] == stock_code].iloc[0]
     m_rank = target['순위']
     amm    = target['시총']
@@ -137,7 +148,6 @@ def fetch_supply_data(stock_name, stock_code, excel_df_json):
     info1 = f"{m_rank}위/ {amm}천억"
     info3 = f"외인:{FO}/기관:{GV}/개인:{IN}(보유:{FC})"
 
-    # ── MongoDB Atlas 연결 ──────────────────
     MONGO_URL = st.secrets["mongo_uri"]
     try:
         with MongoClient(
@@ -152,7 +162,6 @@ def fetch_supply_data(stock_name, stock_code, excel_df_json):
         st.warning(f"MongoDB 연결 오류: {e}")
         db_df = pd.DataFrame()
 
-    # ── plot용 df 구성 ──────────────────────
     plot_df = dk[['날짜','종가','보유율']].copy()
     plot_df['보유율'] = plot_df['보유율'].astype(str).str.replace('%', '').astype(float)
     plot_df['날짜']   = pd.to_datetime(plot_df['날짜'])
@@ -160,7 +169,6 @@ def fetch_supply_data(stock_name, stock_code, excel_df_json):
     plot_df['종목명'] = stock_name
     plot_df['코드']   = stock_code
 
-    # ── DB 데이터 병합 ──────────────────────
     if not db_df.empty:
         if '날짜' in db_df.columns:
             db_df['날짜'] = pd.to_datetime(db_df['날짜'])
@@ -282,7 +290,7 @@ else:
     info2 = "-"
 
 # ─────────────────────────────────────────
-# ThinkPool 링크 + 관심 체크박스
+# ThinkPool 링크 + 관심 슬라이더
 # ─────────────────────────────────────────
 url = f'https://www.thinkpool.com/item/{code}'
 with cool[1]:
@@ -293,24 +301,16 @@ with cool[1]:
         unsafe_allow_html=True
     )
 
-    # 관심 체크박스 5개 (체크 수 = 관심 값)
+    # 관심 슬라이더 — on_change 콜백으로 즉시 저장
     current_interest = int(df[df['종목명'] == item].iloc[0].get('관심', 0))
-    new_interest = st.select_slider(
-    "관심",
-    options=[0, 1, 2, 3, 4, 5],
-    value=current_interest,
-    key=f"interest_{item}" )
-    
-    if new_interest != current_interest:
-        save_data("interest", item, new_interest)
-        st.rerun()   
-        
-    # new_interest = st.radio(
-    # "관심",
-    # options=[0, 1, 2, 3, 4, 5],
-    # index=current_interest,
-    # horizontal=True,
-    # key=f"interest_{item}")
+    st.select_slider(
+        "⭐ 관심",
+        options=[0, 1, 2, 3, 4, 5],
+        value=current_interest,
+        key=f"interest_{item}",
+        on_change=on_interest_change
+    )
+
 # ─────────────────────────────────────────
 # 등락률 (그제 / 어제 / 오늘)
 # ─────────────────────────────────────────
@@ -420,7 +420,6 @@ with tab1:
         unsafe_allow_html=True
     )
 
-    # 상위 5일 / 하위 5일 분리
     top5 = display_df.iloc[:5]
     bot5 = display_df.iloc[5:]
     sum_labels = ['등락률', '외국인', '기관', '개인']
