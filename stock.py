@@ -295,24 +295,22 @@ with cool[1]:
 
     # 관심 체크박스 5개 (체크 수 = 관심 값)
     current_interest = int(df[df['종목명'] == item].iloc[0].get('관심', 0))
-
-    new_interest = st.radio(
+    new_interest = st.select_slider(
     "관심",
     options=[0, 1, 2, 3, 4, 5],
-    index=current_interest,
-    horizontal=True,
-    key=f"interest_{item}")
-
-    # new_interest = st.select_slider(
-    # "관심",
-    # options=[0, 1, 2, 3, 4, 5],
-    # value=current_interest,
-    # key=f"interest_{item}" )
+    value=current_interest,
+    key=f"interest_{item}" )
     
     if new_interest != current_interest:
         save_data("interest", item, new_interest)
         st.rerun()   
-
+        
+    # new_interest = st.radio(
+    # "관심",
+    # options=[0, 1, 2, 3, 4, 5],
+    # index=current_interest,
+    # horizontal=True,
+    # key=f"interest_{item}")
 # ─────────────────────────────────────────
 # 등락률 (그제 / 어제 / 오늘)
 # ─────────────────────────────────────────
