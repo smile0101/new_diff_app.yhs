@@ -247,9 +247,9 @@ if 'selected_name' not in st.session_state:
     st.session_state['selected_name'] = df['종목명'].iloc[0]
 
 # ═════════════════════════════════════════
-# 1단 배열: cool = [2, 1, 2.2, 2, 3]
+# 1단 배열
 # ═════════════════════════════════════════
-cool = st.columns([2, 1, 2.2, 2, 3])
+cool = st.columns([2, 1, 2.2, 1.5, 3])
 
 # ── cool[0]: 종목 선택 / 관심 체크박스 7개 ──────────
 # [변경 1] 관심 필터 selectbox 완전 제거
@@ -392,7 +392,7 @@ with cool[2]:
 
 # ── cool[3]: 링크 버튼 ────────────────────────────
 with cool[3]:
-    btn = "padding:3px 9px;border:1px solid #bbb;border-radius:4px;text-decoration:none;font-size:12px;margin:2px 2px 2px 0;"
+    btn = "padding:3px 9px;border:1px solid #bbb;border-radius:4px;text-decoration:none;font-size:14px;margin:2px 2px 2px 0;"
     url_think = f'https://www.thinkpool.com/item/{code}'
     url_tr    = f'https://kr.tradingview.com/chart/Y3Tq45pg/?symbol=KRX%3A{code}'
     url_fn    = f'https://comp.fnguide.com/SVO2/ASP/SVD_Main.asp?gicode=A{code}'
