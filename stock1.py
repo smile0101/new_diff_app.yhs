@@ -62,7 +62,7 @@ def set_korean_font():
 def get_mongo_col():
     MONGO_URL = st.secrets["mongo_uri"]
     client = MongoClient(MONGO_URL, serverSelectionTimeoutMS=5000, tls=True, tlsInsecure=True)
-    return client, client.forin.stock_info
+    return client, client.forin.stock_in
 
 # ─────────────────────────────────────────
 # MongoDB 읽기
@@ -108,6 +108,13 @@ def save_data(category, stock_name, value):
 def on_interest_change():
     new_val = st.session_state[f"interest_{st.session_state['selected_name']}"]
     save_data("interest", st.session_state['selected_name'], new_val)
+
+# ─────────────────────────────────────────
+# 기준가 콜백 (저장 버튼 없이 자동 저장)
+# ─────────────────────────────────────────
+def on_ref_change():
+    new_val = st.session_state[f"ref_{st.session_state['selected_name']}"]
+    save_data("ref_prices", st.session_state['selected_name'], new_val)
 
 # ─────────────────────────────────────────
 # 통합 수급 함수
@@ -176,7 +183,7 @@ def fetch_supply_data(stock_name, stock_code, df_json):
             db_df['날짜'] = pd.to_datetime(db_df['날짜'])
         if '일자' not in db_df.columns and '날짜' in db_df.columns:
             db_df['일자'] = db_df['날짜'].dt.strftime('%m.%d')
-        merged = (pd.concat([db_df, plot_df], ignore_index=True) ## stocks와 dk merge
+        merged = (pd.concat([db_df, plot_df], ignore_index=True)
                     .drop_duplicates(subset=['날짜'])
                     .sort_values('날짜')
                     .reset_index(drop=True))
@@ -214,7 +221,7 @@ def plot_stock_st(df, stock_name):
 # ─────────────────────────────────────────
 # 데이터 로드 + 세션 초기화
 # ─────────────────────────────────────────
-df = load_mongo()   ## stock_info
+df = load_mongo()
 
 if 'selected_name' not in st.session_state:
     st.session_state['selected_name'] = df['종목명'].iloc[0]
@@ -236,16 +243,17 @@ except ValueError:
     current_index = 0
 
 item = cool[0].selectbox(
-    "Choice",               # 셀렉박스 위에 표시되는 라벨
-    df['종목명'].tolist(),   # 드롭다운 목록 (MongoDB에서 읽어온 전체 종목명 리스트)
-    index=current_index,    # 처음 보여줄 항목의 위치 (0이면 첫 번째 종목)
-    key='stock_selector',   # 이 위젯의 고유 ID → st.session_state['stock_selector']로 접근 가능
-    on_change=update_stock  # 종목을 바꿀 때마다 update_stock 함수 자동 실행
+    "Choice",
+    df['종목명'].tolist(),
+    index=current_index,
+    key='stock_selector',
+    on_change=update_stock
 )
 
 if 'selected_code' not in st.session_state:
     st.session_state['selected_code'] = (
-        df[df['종목명'] == st.session_state['selected_name']].iloc[0]['종목코드']   )
+        df[df['종목명'] == st.session_state['selected_name']].iloc[0]['종목코드']
+    )
 
 code = st.session_state['selected_code']
 
@@ -303,7 +311,6 @@ with cool[1]:
         unsafe_allow_html=True
     )
 
-    # 관심 슬라이더 — 변경 즉시 MongoDB 저장
     current_interest = int(df[df['종목명'] == item].iloc[0].get('관심', 0))
     st.select_slider(
         "⭐ 관심",
@@ -346,10 +353,13 @@ cols = st.columns([1.5, 2, 2, 2, 2, 2, 2, 2])
 with cols[0]:
     row       = df[df['종목명'] == item].iloc[0]
     saved_ref = str(row['기준값']) if row['기준값'] != 0 else ""
-    ref_input = st.text_input("기준가", value=saved_ref, key=f"ref_{item}")
 
-    if st.button("💾 저장", key=f"btn_ref_{item}"):
-        save_data("ref_prices", item, ref_input)
+    ref_input = st.text_input(
+        "기준가",
+        value=saved_ref,
+        key=f"ref_{item}",
+        on_change=on_ref_change          # ← Enter / 포커스 아웃 시 자동 저장
+    )
 
     if CC and ref_input.replace('.', '', 1).isdigit() and float(ref_input) > 0:
         diff  = ((CC - float(ref_input)) / float(ref_input)) * 100
