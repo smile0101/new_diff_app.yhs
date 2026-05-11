@@ -521,7 +521,7 @@ with cols[7]:
     parts = [p.strip() for p in str(jibun_raw).split('/') if p.strip()]
     if parts:
         html_lines = '<br>'.join(
-            f'<span style="font-size:11px;color:#333;">{p}</span>'
+            f'<span style="font-size:13px;color:#333;">{p}</span>'
             for p in parts[:3]
         )
         st.markdown(
