@@ -69,7 +69,7 @@ def format_jibun(jibun_str):
 def get_mongo_col():
     MONGO_URL = st.secrets["mongo_uri"]
     client = MongoClient(MONGO_URL, serverSelectionTimeoutMS=5000, tls=True, tlsInsecure=True)
-    return client, client.forin.stock_info
+    return client, client.forin.stock_in
 
 # ─────────────────────────────────────────
 # MongoDB 읽기
@@ -125,19 +125,33 @@ def save_data(category, stock_name, value):
 # ─────────────────────────────────────────
 # 콜백 함수들
 # ─────────────────────────────────────────
-# ─────────────────────────────────────────
-# 콜백 함수들
-# ─────────────────────────────────────────
+def on_filter_change():
+    st.session_state['interest_filter'] = st.session_state['_interest_filter_sel']
+
 def update_stock():
     new_name = st.session_state['stock_selector']
     row = df[df['종목명'] == new_name].iloc[0]
-    st.session_state['selected_code'] = str(row['종목코드']).zfill(6)
+    st.session_state['selected_code'] = row['종목코드']
     st.session_state['selected_name'] = new_name
 
 def on_ref_change():
     name    = st.session_state['selected_name']
     new_val = st.session_state.get(f"ref_{name}", "")
     save_data("ref_prices", name, new_val)
+
+def on_interest_chk():
+    """체크박스 클릭 시: 관심 0이면 1로, 1~7이면 +1, 7이면 0으로 순환"""
+    name    = st.session_state['selected_name']
+    old_val = st.session_state.get(f"_interest_val_{name}", 0)
+    chk_now = st.session_state[f"chk_interest_{name}"]
+    if chk_now:
+        # 체크됨 → 기존값 기준 +1 순환 (최대 7)
+        new_val = min(old_val + 1, 7) if old_val < 7 else 1
+    else:
+        # 체크 해제 → 0
+        new_val = 0
+    save_data("interest", name, new_val)
+    st.session_state[f"_interest_val_{name}"] = new_val
 
 # ─────────────────────────────────────────
 # 통합 수급 함수
@@ -243,24 +257,52 @@ df = load_mongo()
 
 if 'selected_name' not in st.session_state:
     st.session_state['selected_name'] = df['종목명'].iloc[0]
+if 'interest_filter' not in st.session_state:
+    st.session_state['interest_filter'] = 0
 
 # ═════════════════════════════════════════
 # 1단 배열: cool = [2, 1, 2.2, 2, 3]
 # ═════════════════════════════════════════
 cool = st.columns([2, 1, 2.2, 2, 3])
 
-# ── cool[0]: 종목 선택 + 별 관심 표시 ──
+# ── cool[0]: 관심 필터 / 종목 선택 / 관심 체크박스 ──
 with cool[0]:
 
-    # 전체 종목 목록
-    name_list = df['종목명'].tolist()
+    # ① 관심 필터 셀렉박스 (0=전체, 1~7)
+    filt = st.session_state['interest_filter']
+    st.selectbox(
+        "관심 필터",
+        options=list(range(8)),
+        format_func=lambda x: "전체 목록" if x == 0 else f"관심 {x}",
+        index=filt,
+        key='_interest_filter_sel',
+        on_change=on_filter_change,
+        label_visibility='collapsed'
+    )
+
+    # 필터에 따른 종목 목록 결정
+    filt = st.session_state['interest_filter']
+    if filt == 0:
+        name_list = df['종목명'].tolist()
+    else:
+        name_list = df[df['관심'] == filt]['종목명'].tolist()
+        if not name_list:
+            st.caption(f"관심 {filt}인 종목이 없습니다.")
+            name_list = df['종목명'].tolist()
+
+    # selected_name이 목록 밖이면 첫 번째로 초기화
+    if st.session_state['selected_name'] not in name_list:
+        st.session_state['selected_name'] = name_list[0]
+        st.session_state['selected_code'] = (
+            df[df['종목명'] == name_list[0]].iloc[0]['종목코드']
+        )
 
     try:
         current_index = name_list.index(st.session_state['selected_name'])
     except ValueError:
         current_index = 0
 
-    # ① 종목 선택 셀렉박스
+    # ② 종목 선택 셀렉박스
     item = st.selectbox(
         "종목 선택",
         name_list,
@@ -270,72 +312,39 @@ with cool[0]:
         label_visibility='collapsed'
     )
 
-    # ② 별 7개 버튼 — 클릭한 별 번호가 관심값, 같은 별 재클릭 시 0(초기화)
-    _df_interest = int(df[df['종목명'] == item]['관심'].iloc[0]) if '관심' in df.columns else 0
-    cur_interest = st.session_state.get(f"_interest_val_{item}", _df_interest)
-    st.session_state[f"_interest_val_{item}"] = cur_interest
-
-    def _make_star_cb(star_num):
-        def _cb():
-            name    = st.session_state['selected_name']
-            old_val = st.session_state.get(f"_interest_val_{name}", 0)
-            new_val = 0 if old_val == star_num else star_num   # 같은 별 재클릭 → 0
-            save_data("interest", name, new_val)
-            st.session_state[f"_interest_val_{name}"] = new_val
-        return _cb
-
-    # 별 7개를 한 줄에 표시
-    star_cols = st.columns(7)
-    for i, sc in enumerate(star_cols, start=1):
-        label = "★" if i <= cur_interest else "☆"
-        sc.button(
-            label,
-            key=f"star_{item}_{i}",
-            on_click=_make_star_cb(i),
-            help=f"관심 {i}",
-            use_container_width=True,
+    if 'selected_code' not in st.session_state:
+        st.session_state['selected_code'] = (
+            df[df['종목명'] == item].iloc[0]['종목코드']
         )
 
-# item 기준으로 row_data / code 항상 직접 조회 (session_state 동기화 오류 방지)
-row_data = df[df['종목명'] == item].iloc[0].copy()
-code     = str(row_data['종목코드']).zfill(6)
-st.session_state['selected_code'] = code
+    # ③ 관심 체크박스 (작게) — 클릭마다 +1 순환, 해제하면 0
+    # row_data는 아래 전역에서 정의 — 여기서는 cur_interest만 직접 조회
+    cur_interest = int(df[df['종목명'] == item].iloc[0].get('관심', 0))
+    st.session_state[f"_interest_val_{item}"] = cur_interest
 
-# 관심값은 session_state 최신값으로 덮어쓰기 (캐시된 df보다 우선)
-_ss_interest = st.session_state.get(f"_interest_val_{item}", None)
-if _ss_interest is not None:
-    row_data['관심'] = _ss_interest
+    checked = cur_interest > 0
+    st.checkbox(
+        f"⭐ {cur_interest}" if cur_interest > 0 else "☆ 관심",
+        value=checked,
+        key=f"chk_interest_{item}",
+        on_change=on_interest_chk
+    )
+
+code = st.session_state['selected_code']
+
+# 선택 종목 row_data 전역 확정 (item/code 결정 후 한 번만 조회)
+row_data = df[df['종목명'] == item].iloc[0]
 
 # ─────────────────────────────────────────
-# 개별 값 직접 추출 (target['시총'] 방식)
+# row_data에서 값 안전하게 읽기 (pandas Series용)
 # ─────────────────────────────────────────
-def _val(col):
-    """row_data에서 컬럼값 직접 반환, 없거나 NaN이면 None"""
-    if col not in row_data.index:
-        return None
-    v = row_data[col]
-    if isinstance(v, float) and pd.isna(v):
-        return None
-    return v
-
-유통값    = _val('유통')
-PER값     = _val('PER')
-ROE값     = _val('ROE')
-매출24    = _val('매출_24')
-매출25    = _val('매출_25')
-매출26    = _val('매출_26')
-영익24    = _val('영익_24')
-영익25    = _val('영익_25')
-영익26    = _val('영익_26')
-익율24    = _val('영익률_24')
-익율25    = _val('영익률_25')
-익율26    = _val('영익률_26')
-지분율값  = _val('지분율')
-
-def _fmt(v, fmt='{:.2f}', suffix=''):
-    """값 포맷팅, None이면 빈칸"""
-    if v is None:
-        return ''
+def _get(col_name, suffix='', fmt="{:.2f}"):
+    """row_data(pandas Series)에서 컬럼 값을 안전하게 포맷팅"""
+    if col_name not in row_data.index:
+        return '-'
+    v = row_data[col_name]
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return ''   # NaN이면 빈칸
     try:
         return fmt.format(float(v)) + suffix
     except Exception:
@@ -346,9 +355,9 @@ with cool[1]:
     st.markdown(
         f"""
         <div style="font-size:13px;line-height:2.3;padding-top:4px;">
-            <b>유통</b>&nbsp;{_fmt(유통값, '{:.2f}', '%')}<br>
-            <b>PER</b>&nbsp;&nbsp;{_fmt(PER값,  '{:.2f}')}<br>
-            <b>ROE</b>&nbsp;&nbsp;{_fmt(ROE값,  '{:.2f}', '%')}
+            <b>유통</b>&nbsp;{_get('유통', '%', '{:.2f}')}<br>
+            <b>PER</b>&nbsp;&nbsp;{_get('PER', '', '{:.2f}')}<br>
+            <b>ROE</b>&nbsp;&nbsp;{_get('ROE', '%', '{:.2f}')}
         </div>
         """,
         unsafe_allow_html=True
@@ -438,9 +447,21 @@ with cool[3]:
 with cool[4]:
     fin_df = pd.DataFrame({
         '구분': ['매출', '영익', '익율'],
-        '24년': [_fmt(매출24, '{:.0f}'), _fmt(영익24, '{:.0f}'), _fmt(익율24, '{:.2f}')],
-        '25년': [_fmt(매출25, '{:.0f}'), _fmt(영익25, '{:.0f}'), _fmt(익율25, '{:.2f}')],
-        '26년': [_fmt(매출26, '{:.0f}'), _fmt(영익26, '{:.0f}'), _fmt(익율26, '{:.2f}')],
+        '24년': [
+            _get('매출_24', fmt='{:.0f}'),
+            _get('영익_24', fmt='{:.0f}'),
+            _get('영익률_24', fmt='{:.2f}'),
+        ],
+        '25년': [
+            _get('매출_25', fmt='{:.0f}'),
+            _get('영익_25', fmt='{:.0f}'),
+            _get('영익률_25', fmt='{:.2f}'),
+        ],
+        '26년': [
+            _get('매출_26', fmt='{:.0f}'),
+            _get('영익_26', fmt='{:.0f}'),
+            _get('영익률_26', fmt='{:.2f}'),
+        ],
     }).set_index('구분')
 
     st.dataframe(
@@ -493,8 +514,11 @@ with cols[6]:
 
 with cols[7]:
     # 지분율: '/' 기준으로 분리, 빈 항목 제거, 최대 3줄
-    jibun_raw = '' if 지분율값 is None else str(지분율값)
-    parts = [p.strip() for p in jibun_raw.split('/') if p.strip()]
+    jibun_raw = row_data['지분율'] if '지분율' in row_data.index else ''
+    if pd.isna(jibun_raw) if isinstance(jibun_raw, float) else False:
+        jibun_raw = ''
+
+    parts = [p.strip() for p in str(jibun_raw).split('/') if p.strip()]
     if parts:
         html_lines = '<br>'.join(
             f'<span style="font-size:11px;color:#333;">{p}</span>'
