@@ -252,7 +252,6 @@ if 'selected_name' not in st.session_state:
 cool = st.columns([2, 1, 2.2, 1.5, 3])
 
 # ── cool[0]: 종목 선택 / 관심 체크박스 7개 ──────────
-# [변경 1] 관심 필터 selectbox 완전 제거
 with cool[0]:
     name_list = df['종목명'].tolist()
 
@@ -282,7 +281,6 @@ with cool[0]:
             df[df['종목명'] == item].iloc[0]['종목코드']
         )
 
-    # [변경 2] 관심 표시 — st.pills 로 가로 배열 (1~7, 선택 해제 가능)
     cur_interest = int(df[df['종목명'] == item].iloc[0].get('관심', 0))
     default_pill = str(cur_interest) if cur_interest > 0 else None
 
@@ -315,7 +313,6 @@ def _get(col_name, suffix='', fmt="{:.2f}"):
         return str(v)
 
 # ── cool[1]: 유통 / PER / ROE ──────────────────────
-# [변경 3] 폰트 13px → 16px 로 확대
 with cool[1]:
     st.markdown(
         f"""
@@ -392,7 +389,7 @@ with cool[2]:
 
 # ── cool[3]: 링크 버튼 ────────────────────────────
 with cool[3]:
-    btn = "padding:3px 9px;border:1px solid #bbb;border-radius:4px;text-decoration:none;font-size:14px;margin:2px 2px 2px 0;"
+    btn = "padding:3px 9px;border:1px solid #bbb;border-radius:4px;text-decoration:none;font-size:15px;margin:2px 2px 2px 0;"
     url_think = f'https://www.thinkpool.com/item/{code}'
     url_tr    = f'https://kr.tradingview.com/chart/Y3Tq45pg/?symbol=KRX%3A{code}'
     url_fn    = f'https://comp.fnguide.com/SVO2/ASP/SVD_Main.asp?gicode=A{code}'
@@ -409,7 +406,6 @@ with cool[3]:
     )
 
 # ── cool[4]: 재무 데이터프레임 ─────────────────────
-# [변경 4] height 140 → 115 축소, 헤더·데이터 모두 가운데 정렬
 with cool[4]:
     fin_df = pd.DataFrame({
         '구분': ['매출', '영익', '익율'],
@@ -478,7 +474,6 @@ with cols[6]:
     difl_3m = CC - low_3m
     custom_metric("분기최저", low_3m, difl_3m, f"+{(difl_3m/low_3m)*100:.1f}%")
 
-# [변경 5] cols[7] 지분율 폰트 11px → 13px
 with cols[7]:
     jibun_raw = row_data['지분율'] if '지분율' in row_data.index else ''
     if pd.isna(jibun_raw) if isinstance(jibun_raw, float) else False:
@@ -487,7 +482,7 @@ with cols[7]:
     parts = [p.strip() for p in str(jibun_raw).split('/') if p.strip()]
     if parts:
         html_lines = '<br>'.join(
-            f'<span style="font-size:13px;color:#333;">{p}</span>'
+            f'<span style="font-size:14px;color:#333;">{p}</span>'
             for p in parts[:3]
         )
         st.markdown(
