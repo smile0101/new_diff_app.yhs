@@ -135,11 +135,11 @@ def on_ref_change():
     new_val = st.session_state.get(f"ref_{name}", "")
     save_data("ref_prices", name, new_val)
 
-def on_interest_chk(star_num, stock_name, cur_interest):
-    """해당 번호 클릭: 같은 번호면 0(해제), 다른 번호면 그 번호로 설정"""
-    new_val = 0 if cur_interest == star_num else star_num
+def on_interest_pills(stock_name):
+    """pills 선택 변경 시 저장 (None = 선택 해제 → 0으로 저장)"""
+    val = st.session_state[f"pills_interest_{stock_name}"]
+    new_val = int(val) if val is not None else 0
     save_data("interest", stock_name, new_val)
-    st.session_state[f"_interest_val_{stock_name}"] = new_val
 
 # ─────────────────────────────────────────
 # 통합 수급 함수
@@ -246,27 +246,6 @@ df = load_mongo()
 if 'selected_name' not in st.session_state:
     st.session_state['selected_name'] = df['종목명'].iloc[0]
 
-# ─────────────────────────────────────────
-# [변경 2] 관심 체크박스 작게 표시하는 전역 CSS
-# ─────────────────────────────────────────
-st.markdown("""
-<style>
-div[data-testid="stCheckbox"] label {
-    font-size: 11px !important;
-    padding-left: 2px !important;
-    gap: 2px !important;
-}
-div[data-testid="stCheckbox"] span[data-testid="stCheckboxLabel"] {
-    font-size: 11px !important;
-}
-div[data-testid="stCheckbox"] > label > div:first-child {
-    width: 13px !important;
-    height: 13px !important;
-    min-width: 13px !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
 # ═════════════════════════════════════════
 # 1단 배열: cool = [2, 1, 2.2, 2, 3]
 # ═════════════════════════════════════════
@@ -303,18 +282,18 @@ with cool[0]:
             df[df['종목명'] == item].iloc[0]['종목코드']
         )
 
-    # [변경 2] 관심 체크박스 7개 가로 배열 — 1~7 숫자 라벨
+    # [변경 2] 관심 표시 — st.pills 로 가로 배열 (1~7, 선택 해제 가능)
     cur_interest = int(df[df['종목명'] == item].iloc[0].get('관심', 0))
-    st.session_state[f"_interest_val_{item}"] = cur_interest
+    default_pill = str(cur_interest) if cur_interest > 0 else None
 
-    star_cols = st.columns(7)
-    for i, col in enumerate(star_cols, start=1):
-        is_checked = (cur_interest == i)
-        chk_val = col.checkbox(str(i), value=is_checked, key=f"chk_interest_{item}_{i}")
-        if chk_val and not is_checked:
-            on_interest_chk(i, item, cur_interest)
-        elif not chk_val and is_checked:
-            on_interest_chk(i, item, cur_interest)
+    st.pills(
+        "관심",
+        options=["1","2","3","4","5","6","7"],
+        default=default_pill,
+        key=f"pills_interest_{item}",
+        on_change=lambda: on_interest_pills(item),
+        label_visibility="collapsed",
+    )
 
 code = st.session_state['selected_code']
 
