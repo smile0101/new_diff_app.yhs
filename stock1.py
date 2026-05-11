@@ -90,7 +90,6 @@ def load_mongo():
         df['관심'] = 0
     df['관심'] = df['관심'].fillna(0).astype(int)
 
-    # 재무 컬럼 숫자 변환
     for c in ['매출_24','매출_25','매출_26',
               '영익_24','영익_25','영익_26',
               '영익률_24','영익률_25','영익률_26',
@@ -125,9 +124,6 @@ def save_data(category, stock_name, value):
 # ─────────────────────────────────────────
 # 콜백 함수들
 # ─────────────────────────────────────────
-def on_filter_change():
-    st.session_state['interest_filter'] = st.session_state['_interest_filter_sel']
-
 def update_stock():
     new_name = st.session_state['stock_selector']
     row = df[df['종목명'] == new_name].iloc[0]
@@ -139,19 +135,11 @@ def on_ref_change():
     new_val = st.session_state.get(f"ref_{name}", "")
     save_data("ref_prices", name, new_val)
 
-def on_interest_chk():
-    """체크박스 클릭 시: 관심 0이면 1로, 1~7이면 +1, 7이면 0으로 순환"""
-    name    = st.session_state['selected_name']
-    old_val = st.session_state.get(f"_interest_val_{name}", 0)
-    chk_now = st.session_state[f"chk_interest_{name}"]
-    if chk_now:
-        # 체크됨 → 기존값 기준 +1 순환 (최대 7)
-        new_val = min(old_val + 1, 7) if old_val < 7 else 1
-    else:
-        # 체크 해제 → 0
-        new_val = 0
-    save_data("interest", name, new_val)
-    st.session_state[f"_interest_val_{name}"] = new_val
+def on_interest_chk(star_num, stock_name, cur_interest):
+    """해당 번호 클릭: 같은 번호면 0(해제), 다른 번호면 그 번호로 설정"""
+    new_val = 0 if cur_interest == star_num else star_num
+    save_data("interest", stock_name, new_val)
+    st.session_state[f"_interest_val_{stock_name}"] = new_val
 
 # ─────────────────────────────────────────
 # 통합 수급 함수
@@ -257,40 +245,38 @@ df = load_mongo()
 
 if 'selected_name' not in st.session_state:
     st.session_state['selected_name'] = df['종목명'].iloc[0]
-if 'interest_filter' not in st.session_state:
-    st.session_state['interest_filter'] = 0
+
+# ─────────────────────────────────────────
+# [변경 2] 관심 체크박스 작게 표시하는 전역 CSS
+# ─────────────────────────────────────────
+st.markdown("""
+<style>
+div[data-testid="stCheckbox"] label {
+    font-size: 11px !important;
+    padding-left: 2px !important;
+    gap: 2px !important;
+}
+div[data-testid="stCheckbox"] span[data-testid="stCheckboxLabel"] {
+    font-size: 11px !important;
+}
+div[data-testid="stCheckbox"] > label > div:first-child {
+    width: 13px !important;
+    height: 13px !important;
+    min-width: 13px !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ═════════════════════════════════════════
 # 1단 배열: cool = [2, 1, 2.2, 2, 3]
 # ═════════════════════════════════════════
 cool = st.columns([2, 1, 2.2, 2, 3])
 
-# ── cool[0]: 관심 필터 / 종목 선택 / 관심 체크박스 ──
+# ── cool[0]: 종목 선택 / 관심 체크박스 7개 ──────────
+# [변경 1] 관심 필터 selectbox 완전 제거
 with cool[0]:
+    name_list = df['종목명'].tolist()
 
-    # ① 관심 필터 셀렉박스 (0=전체, 1~7)
-    filt = st.session_state['interest_filter']
-    st.selectbox(
-        "관심 필터",
-        options=list(range(8)),
-        format_func=lambda x: "전체 목록" if x == 0 else f"관심 {x}",
-        index=filt,
-        key='_interest_filter_sel',
-        on_change=on_filter_change,
-        label_visibility='collapsed'
-    )
-
-    # 필터에 따른 종목 목록 결정
-    filt = st.session_state['interest_filter']
-    if filt == 0:
-        name_list = df['종목명'].tolist()
-    else:
-        name_list = df[df['관심'] == filt]['종목명'].tolist()
-        if not name_list:
-            st.caption(f"관심 {filt}인 종목이 없습니다.")
-            name_list = df['종목명'].tolist()
-
-    # selected_name이 목록 밖이면 첫 번째로 초기화
     if st.session_state['selected_name'] not in name_list:
         st.session_state['selected_name'] = name_list[0]
         st.session_state['selected_code'] = (
@@ -302,7 +288,7 @@ with cool[0]:
     except ValueError:
         current_index = 0
 
-    # ② 종목 선택 셀렉박스
+    # 종목 선택 셀렉박스
     item = st.selectbox(
         "종목 선택",
         name_list,
@@ -317,44 +303,44 @@ with cool[0]:
             df[df['종목명'] == item].iloc[0]['종목코드']
         )
 
-    # ③ 관심 체크박스 (작게) — 클릭마다 +1 순환, 해제하면 0
-    # row_data는 아래 전역에서 정의 — 여기서는 cur_interest만 직접 조회
+    # [변경 2] 관심 체크박스 7개 가로 배열 — 1~7 숫자 라벨
     cur_interest = int(df[df['종목명'] == item].iloc[0].get('관심', 0))
     st.session_state[f"_interest_val_{item}"] = cur_interest
 
-    checked = cur_interest > 0
-    st.checkbox(
-        f"⭐ {cur_interest}" if cur_interest > 0 else "☆ 관심",
-        value=checked,
-        key=f"chk_interest_{item}",
-        on_change=on_interest_chk
-    )
+    star_cols = st.columns(7)
+    for i, col in enumerate(star_cols, start=1):
+        is_checked = (cur_interest == i)
+        chk_val = col.checkbox(str(i), value=is_checked, key=f"chk_interest_{item}_{i}")
+        if chk_val and not is_checked:
+            on_interest_chk(i, item, cur_interest)
+        elif not chk_val and is_checked:
+            on_interest_chk(i, item, cur_interest)
 
 code = st.session_state['selected_code']
 
-# 선택 종목 row_data 전역 확정 (item/code 결정 후 한 번만 조회)
+# 선택 종목 row_data 전역 확정
 row_data = df[df['종목명'] == item].iloc[0]
 
 # ─────────────────────────────────────────
-# row_data에서 값 안전하게 읽기 (pandas Series용)
+# row_data에서 값 안전하게 읽기
 # ─────────────────────────────────────────
 def _get(col_name, suffix='', fmt="{:.2f}"):
-    """row_data(pandas Series)에서 컬럼 값을 안전하게 포맷팅"""
     if col_name not in row_data.index:
         return '-'
     v = row_data[col_name]
     if v is None or (isinstance(v, float) and pd.isna(v)):
-        return ''   # NaN이면 빈칸
+        return ''
     try:
         return fmt.format(float(v)) + suffix
     except Exception:
         return str(v)
 
-# ── cool[1]: 유통 / PER / ROE ──────────────
+# ── cool[1]: 유통 / PER / ROE ──────────────────────
+# [변경 3] 폰트 13px → 16px 로 확대
 with cool[1]:
     st.markdown(
         f"""
-        <div style="font-size:13px;line-height:2.3;padding-top:4px;">
+        <div style="font-size:16px;line-height:2.3;padding-top:4px;">
             <b>유통</b>&nbsp;{_get('유통', '%', '{:.2f}')}<br>
             <b>PER</b>&nbsp;&nbsp;{_get('PER', '', '{:.2f}')}<br>
             <b>ROE</b>&nbsp;&nbsp;{_get('ROE', '%', '{:.2f}')}
@@ -363,7 +349,7 @@ with cool[1]:
         unsafe_allow_html=True
     )
 
-# ── 주가 데이터 (cool[2] 전에 로드) ──────────
+# ── 주가 데이터 (cool[2] 전에 로드) ─────────────────
 @st.cache_data(ttl=600)
 def get_stock_data(code):
     return fdr.DataReader(code).tail(60)
@@ -401,7 +387,7 @@ if CC:
 else:
     info2 = "-"
 
-# ── cool[2]: 현재가 + 등락률 + 시총순위 + 거래량 ──
+# ── cool[2]: 현재가 + 등락률 + 시총순위 + 거래량 ──────
 with cool[2]:
     cc_str = f"{CC:,.0f}" if CC else "-"
     st.markdown(
@@ -425,7 +411,7 @@ with cool[2]:
         unsafe_allow_html=True
     )
 
-# ── cool[3]: 링크 버튼 ─────────────────────────
+# ── cool[3]: 링크 버튼 ────────────────────────────
 with cool[3]:
     btn = "padding:3px 9px;border:1px solid #bbb;border-radius:4px;text-decoration:none;font-size:12px;margin:2px 2px 2px 0;"
     url_think = f'https://www.thinkpool.com/item/{code}'
@@ -443,7 +429,8 @@ with cool[3]:
         unsafe_allow_html=True
     )
 
-# ── cool[4]: 재무 데이터프레임 ─────────────────
+# ── cool[4]: 재무 데이터프레임 ─────────────────────
+# [변경 4] height 140 → 115 축소, 헤더·데이터 모두 가운데 정렬
 with cool[4]:
     fin_df = pd.DataFrame({
         '구분': ['매출', '영익', '익율'],
@@ -466,13 +453,13 @@ with cool[4]:
 
     st.dataframe(
         fin_df.style
-            .set_properties(**{'text-align': 'right', 'font-size': '12px'})
+            .set_properties(**{'text-align': 'center', 'font-size': '12px'})
             .set_table_styles([
                 {'selector': 'th', 'props': [('text-align', 'center'), ('font-size', '12px')]},
-                {'selector': 'td', 'props': [('text-align', 'right')]},
+                {'selector': 'td', 'props': [('text-align', 'center')]},
             ]),
         use_container_width=True,
-        height=140,
+        height=115,
     )
 
 # ═════════════════════════════════════════
@@ -512,8 +499,8 @@ with cols[6]:
     difl_3m = CC - low_3m
     custom_metric("분기최저", low_3m, difl_3m, f"+{(difl_3m/low_3m)*100:.1f}%")
 
+# [변경 5] cols[7] 지분율 폰트 11px → 13px
 with cols[7]:
-    # 지분율: '/' 기준으로 분리, 빈 항목 제거, 최대 3줄
     jibun_raw = row_data['지분율'] if '지분율' in row_data.index else ''
     if pd.isna(jibun_raw) if isinstance(jibun_raw, float) else False:
         jibun_raw = ''
