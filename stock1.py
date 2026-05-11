@@ -125,33 +125,19 @@ def save_data(category, stock_name, value):
 # ─────────────────────────────────────────
 # 콜백 함수들
 # ─────────────────────────────────────────
-def on_filter_change():
-    st.session_state['interest_filter'] = st.session_state['_interest_filter_sel']
-
+# ─────────────────────────────────────────
+# 콜백 함수들
+# ─────────────────────────────────────────
 def update_stock():
     new_name = st.session_state['stock_selector']
     row = df[df['종목명'] == new_name].iloc[0]
-    st.session_state['selected_code'] = row['종목코드']
+    st.session_state['selected_code'] = str(row['종목코드']).zfill(6)
     st.session_state['selected_name'] = new_name
 
 def on_ref_change():
     name    = st.session_state['selected_name']
     new_val = st.session_state.get(f"ref_{name}", "")
     save_data("ref_prices", name, new_val)
-
-def on_interest_chk():
-    """체크박스 클릭 시: 관심 0이면 1로, 1~7이면 +1, 7이면 0으로 순환"""
-    name    = st.session_state['selected_name']
-    old_val = st.session_state.get(f"_interest_val_{name}", 0)
-    chk_now = st.session_state[f"chk_interest_{name}"]
-    if chk_now:
-        # 체크됨 → 기존값 기준 +1 순환 (최대 7)
-        new_val = min(old_val + 1, 7) if old_val < 7 else 1
-    else:
-        # 체크 해제 → 0
-        new_val = 0
-    save_data("interest", name, new_val)
-    st.session_state[f"_interest_val_{name}"] = new_val
 
 # ─────────────────────────────────────────
 # 통합 수급 함수
@@ -257,52 +243,24 @@ df = load_mongo()
 
 if 'selected_name' not in st.session_state:
     st.session_state['selected_name'] = df['종목명'].iloc[0]
-if 'interest_filter' not in st.session_state:
-    st.session_state['interest_filter'] = 0
 
 # ═════════════════════════════════════════
 # 1단 배열: cool = [2, 1, 2.2, 2, 3]
 # ═════════════════════════════════════════
 cool = st.columns([2, 1, 2.2, 2, 3])
 
-# ── cool[0]: 관심 필터 / 종목 선택 / 관심 체크박스 ──
+# ── cool[0]: 종목 선택 + 별 관심 표시 ──
 with cool[0]:
 
-    # ① 관심 필터 셀렉박스 (0=전체, 1~7)
-    filt = st.session_state['interest_filter']
-    st.selectbox(
-        "관심 필터",
-        options=list(range(8)),
-        format_func=lambda x: "전체 목록" if x == 0 else f"관심 {x}",
-        index=filt,
-        key='_interest_filter_sel',
-        on_change=on_filter_change,
-        label_visibility='collapsed'
-    )
-
-    # 필터에 따른 종목 목록 결정
-    filt = st.session_state['interest_filter']
-    if filt == 0:
-        name_list = df['종목명'].tolist()
-    else:
-        name_list = df[df['관심'] == filt]['종목명'].tolist()
-        if not name_list:
-            st.caption(f"관심 {filt}인 종목이 없습니다.")
-            name_list = df['종목명'].tolist()
-
-    # selected_name이 목록 밖이면 첫 번째로 초기화
-    if st.session_state['selected_name'] not in name_list:
-        st.session_state['selected_name'] = name_list[0]
-        st.session_state['selected_code'] = (
-            df[df['종목명'] == name_list[0]].iloc[0]['종목코드']
-        )
+    # 전체 종목 목록
+    name_list = df['종목명'].tolist()
 
     try:
         current_index = name_list.index(st.session_state['selected_name'])
     except ValueError:
         current_index = 0
 
-    # ② 종목 선택 셀렉박스
+    # ① 종목 선택 셀렉박스
     item = st.selectbox(
         "종목 선택",
         name_list,
@@ -312,28 +270,41 @@ with cool[0]:
         label_visibility='collapsed'
     )
 
-    if 'selected_code' not in st.session_state:
-        st.session_state['selected_code'] = (
-            df[df['종목명'] == item].iloc[0]['종목코드']
-        )
-
-    # ③ 관심 체크박스 (작게) — 클릭마다 +1 순환, 해제하면 0
-    # row_data는 아래 전역에서 정의 — 여기서는 cur_interest만 직접 조회
-    cur_interest = int(df[df['종목명'] == item].iloc[0].get('관심', 0))
+    # ② 별 7개 버튼 — 클릭한 별 번호가 관심값, 같은 별 재클릭 시 0(초기화)
+    _df_interest = int(df[df['종목명'] == item]['관심'].iloc[0]) if '관심' in df.columns else 0
+    cur_interest = st.session_state.get(f"_interest_val_{item}", _df_interest)
     st.session_state[f"_interest_val_{item}"] = cur_interest
 
-    checked = cur_interest > 0
-    st.checkbox(
-        f"⭐ {cur_interest}" if cur_interest > 0 else "☆ 관심",
-        value=checked,
-        key=f"chk_interest_{item}",
-        on_change=on_interest_chk
-    )
+    def _make_star_cb(star_num):
+        def _cb():
+            name    = st.session_state['selected_name']
+            old_val = st.session_state.get(f"_interest_val_{name}", 0)
+            new_val = 0 if old_val == star_num else star_num   # 같은 별 재클릭 → 0
+            save_data("interest", name, new_val)
+            st.session_state[f"_interest_val_{name}"] = new_val
+        return _cb
 
-code = st.session_state['selected_code']
+    # 별 7개를 한 줄에 표시
+    star_cols = st.columns(7)
+    for i, sc in enumerate(star_cols, start=1):
+        label = "★" if i <= cur_interest else "☆"
+        sc.button(
+            label,
+            key=f"star_{item}_{i}",
+            on_click=_make_star_cb(i),
+            help=f"관심 {i}",
+            use_container_width=True,
+        )
 
-# 선택 종목 row_data 전역 확정 (item/code 결정 후 한 번만 조회)
-row_data = df[df['종목명'] == item].iloc[0]
+# item 기준으로 row_data / code 항상 직접 조회 (session_state 동기화 오류 방지)
+row_data = df[df['종목명'] == item].iloc[0].copy()
+code     = str(row_data['종목코드']).zfill(6)
+st.session_state['selected_code'] = code
+
+# 관심값은 session_state 최신값으로 덮어쓰기 (캐시된 df보다 우선)
+_ss_interest = st.session_state.get(f"_interest_val_{item}", None)
+if _ss_interest is not None:
+    row_data['관심'] = _ss_interest
 
 # ─────────────────────────────────────────
 # row_data에서 값 안전하게 읽기 (pandas Series용)
@@ -352,26 +323,16 @@ def _get(col_name, suffix='', fmt="{:.2f}"):
 
 # ── cool[1]: 유통 / PER / ROE ──────────────
 with cool[1]:
-
-    yutong = _get('유통', '%', '{:.2f}')
-    per    = _get('PER', '', '{:.2f}')
-    roe    = _get('ROE', '%', '{:.2f}')
-
     st.markdown(
         f"""
-        <div style="
-            font-size:13px;
-            line-height:2.2;
-            padding-top:4px;
-        ">
-            <b>유통</b> : {yutong}<br>
-            <b>PER</b> : {per}<br>
-            <b>ROE</b> : {roe}
+        <div style="font-size:13px;line-height:2.3;padding-top:4px;">
+            <b>유통</b>&nbsp;{_get('유통', '%', '{:.2f}')}<br>
+            <b>PER</b>&nbsp;&nbsp;{_get('PER', '', '{:.2f}')}<br>
+            <b>ROE</b>&nbsp;&nbsp;{_get('ROE', '%', '{:.2f}')}
         </div>
         """,
         unsafe_allow_html=True
     )
-
 
 # ── 주가 데이터 (cool[2] 전에 로드) ──────────
 @st.cache_data(ttl=600)
@@ -455,69 +416,35 @@ with cool[3]:
 
 # ── cool[4]: 재무 데이터프레임 ─────────────────
 with cool[4]:
-
     fin_df = pd.DataFrame({
         '구분': ['매출', '영익', '익율'],
-
         '24년': [
             _get('매출_24', fmt='{:.0f}'),
             _get('영익_24', fmt='{:.0f}'),
-            _get('영익률_24', fmt='{:.2f}')
+            _get('영익률_24', fmt='{:.2f}'),
         ],
-
         '25년': [
             _get('매출_25', fmt='{:.0f}'),
             _get('영익_25', fmt='{:.0f}'),
-            _get('영익률_25', fmt='{:.2f}')
+            _get('영익률_25', fmt='{:.2f}'),
         ],
-
         '26년': [
             _get('매출_26', fmt='{:.0f}'),
             _get('영익_26', fmt='{:.0f}'),
-            _get('영익률_26', fmt='{:.2f}')
-        ]
-    })
+            _get('영익률_26', fmt='{:.2f}'),
+        ],
+    }).set_index('구분')
 
     st.dataframe(
-        fin_df,
+        fin_df.style
+            .set_properties(**{'text-align': 'right', 'font-size': '12px'})
+            .set_table_styles([
+                {'selector': 'th', 'props': [('text-align', 'center'), ('font-size', '12px')]},
+                {'selector': 'td', 'props': [('text-align', 'right')]},
+            ]),
         use_container_width=True,
-        hide_index=True,
-        height=140
+        height=140,
     )
-
-
-
-# # ── cool[4]: 재무 데이터프레임 ─────────────────
-# with cool[4]:
-#     fin_df = pd.DataFrame({
-#         '구분': ['매출', '영익', '익율'],
-#         '24년': [
-#             _get('매출_24', fmt='{:.0f}'),
-#             _get('영익_24', fmt='{:.0f}'),
-#             _get('영익률_24', fmt='{:.2f}'),
-#         ],
-#         '25년': [
-#             _get('매출_25', fmt='{:.0f}'),
-#             _get('영익_25', fmt='{:.0f}'),
-#             _get('영익률_25', fmt='{:.2f}'),
-#         ],
-#         '26년': [
-#             _get('매출_26', fmt='{:.0f}'),
-#             _get('영익_26', fmt='{:.0f}'),
-#             _get('영익률_26', fmt='{:.2f}'),
-#         ],
-#     }).set_index('구분')
-
-#     st.dataframe(
-#         fin_df.style
-#             .set_properties(**{'text-align': 'right', 'font-size': '12px'})
-#             .set_table_styles([
-#                 {'selector': 'th', 'props': [('text-align', 'center'), ('font-size', '12px')]},
-#                 {'selector': 'td', 'props': [('text-align', 'right')]},
-#             ]),
-#         use_container_width=True,
-#         height=140,
-#     )
 
 # ═════════════════════════════════════════
 # 2단 배열: 기준가 + 고저가 + 지분율
@@ -552,32 +479,24 @@ with cols[4]:
 with cols[5]:
     difh_3m = high_3m - CC
     custom_metric("분기최고", high_3m, difh_3m, f"-{(difh_3m/CC)*100:.1f}%", "inverse")
-    
-# ── cols[7]: 지분율 ─────────────────
+with cols[6]:
+    difl_3m = CC - low_3m
+    custom_metric("분기최저", low_3m, difl_3m, f"+{(difl_3m/low_3m)*100:.1f}%")
+
 with cols[7]:
+    # 지분율: '/' 기준으로 분리, 빈 항목 제거, 최대 3줄
+    jibun_raw = row_data['지분율'] if '지분율' in row_data.index else ''
+    if pd.isna(jibun_raw) if isinstance(jibun_raw, float) else False:
+        jibun_raw = ''
 
-    jibun_raw = row_data.get('지분율', '')
-
-    if pd.notna(jibun_raw):
-
-        parts = [
-            x.strip()
-            for x in str(jibun_raw).split('/')
-            if x.strip()
-        ]
-
-        jibun_text = "<br>".join(parts[:3])
-
+    parts = [p.strip() for p in str(jibun_raw).split('/') if p.strip()]
+    if parts:
+        html_lines = '<br>'.join(
+            f'<span style="font-size:11px;color:#333;">{p}</span>'
+            for p in parts[:3]
+        )
         st.markdown(
-            f"""
-            <div style="
-                font-size:12px;
-                line-height:1.8;
-                padding-top:5px;
-            ">
-                {jibun_text}
-            </div>
-            """,
+            f'<div style="line-height:2.0;padding-top:6px;">{html_lines}</div>',
             unsafe_allow_html=True
         )
 
@@ -658,10 +577,4 @@ memo_val = st.text_area(
 )
 
 if st.button("💾 메모 저장", key=f"btn_memo_{item}"):
-    save_data("memos", item, memo_val)
-
-
-
-
-
     save_data("memos", item, memo_val)
