@@ -318,8 +318,8 @@ with cool[0]:
         )
 
     # ③ 관심 체크박스 (작게) — 클릭마다 +1 순환, 해제하면 0
-    row_data     = df[df['종목명'] == item].iloc[0]
-    cur_interest = int(row_data.get('관심', 0))
+    # row_data는 아래 전역에서 정의 — 여기서는 cur_interest만 직접 조회
+    cur_interest = int(df[df['종목명'] == item].iloc[0].get('관심', 0))
     st.session_state[f"_interest_val_{item}"] = cur_interest
 
     checked = cur_interest > 0
@@ -331,6 +331,9 @@ with cool[0]:
     )
 
 code = st.session_state['selected_code']
+
+# 선택 종목 row_data 전역 확정 (item/code 결정 후 한 번만 조회)
+row_data = df[df['종목명'] == item].iloc[0]
 
 # ── cool[1]: 유통 / PER / ROE ──────────────
 with cool[1]:
