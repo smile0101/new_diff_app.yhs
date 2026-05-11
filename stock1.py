@@ -307,15 +307,35 @@ if _ss_interest is not None:
     row_data['관심'] = _ss_interest
 
 # ─────────────────────────────────────────
-# row_data에서 값 안전하게 읽기 (pandas Series용)
+# 개별 값 직접 추출 (target['시총'] 방식)
 # ─────────────────────────────────────────
-def _get(col_name, suffix='', fmt="{:.2f}"):
-    """row_data(pandas Series)에서 컬럼 값을 안전하게 포맷팅"""
-    if col_name not in row_data.index:
-        return '-'
-    v = row_data[col_name]
-    if v is None or (isinstance(v, float) and pd.isna(v)):
-        return ''   # NaN이면 빈칸
+def _val(col):
+    """row_data에서 컬럼값 직접 반환, 없거나 NaN이면 None"""
+    if col not in row_data.index:
+        return None
+    v = row_data[col]
+    if isinstance(v, float) and pd.isna(v):
+        return None
+    return v
+
+유통값    = _val('유통')
+PER값     = _val('PER')
+ROE값     = _val('ROE')
+매출24    = _val('매출_24')
+매출25    = _val('매출_25')
+매출26    = _val('매출_26')
+영익24    = _val('영익_24')
+영익25    = _val('영익_25')
+영익26    = _val('영익_26')
+익율24    = _val('영익률_24')
+익율25    = _val('영익률_25')
+익율26    = _val('영익률_26')
+지분율값  = _val('지분율')
+
+def _fmt(v, fmt='{:.2f}', suffix=''):
+    """값 포맷팅, None이면 빈칸"""
+    if v is None:
+        return ''
     try:
         return fmt.format(float(v)) + suffix
     except Exception:
@@ -326,9 +346,9 @@ with cool[1]:
     st.markdown(
         f"""
         <div style="font-size:13px;line-height:2.3;padding-top:4px;">
-            <b>유통</b>&nbsp;{_get('유통', '%', '{:.2f}')}<br>
-            <b>PER</b>&nbsp;&nbsp;{_get('PER', '', '{:.2f}')}<br>
-            <b>ROE</b>&nbsp;&nbsp;{_get('ROE', '%', '{:.2f}')}
+            <b>유통</b>&nbsp;{_fmt(유통값, '{:.2f}', '%')}<br>
+            <b>PER</b>&nbsp;&nbsp;{_fmt(PER값,  '{:.2f}')}<br>
+            <b>ROE</b>&nbsp;&nbsp;{_fmt(ROE값,  '{:.2f}', '%')}
         </div>
         """,
         unsafe_allow_html=True
@@ -418,21 +438,9 @@ with cool[3]:
 with cool[4]:
     fin_df = pd.DataFrame({
         '구분': ['매출', '영익', '익율'],
-        '24년': [
-            _get('매출_24', fmt='{:.0f}'),
-            _get('영익_24', fmt='{:.0f}'),
-            _get('영익률_24', fmt='{:.2f}'),
-        ],
-        '25년': [
-            _get('매출_25', fmt='{:.0f}'),
-            _get('영익_25', fmt='{:.0f}'),
-            _get('영익률_25', fmt='{:.2f}'),
-        ],
-        '26년': [
-            _get('매출_26', fmt='{:.0f}'),
-            _get('영익_26', fmt='{:.0f}'),
-            _get('영익률_26', fmt='{:.2f}'),
-        ],
+        '24년': [_fmt(매출24, '{:.0f}'), _fmt(영익24, '{:.0f}'), _fmt(익율24, '{:.2f}')],
+        '25년': [_fmt(매출25, '{:.0f}'), _fmt(영익25, '{:.0f}'), _fmt(익율25, '{:.2f}')],
+        '26년': [_fmt(매출26, '{:.0f}'), _fmt(영익26, '{:.0f}'), _fmt(익율26, '{:.2f}')],
     }).set_index('구분')
 
     st.dataframe(
@@ -485,11 +493,8 @@ with cols[6]:
 
 with cols[7]:
     # 지분율: '/' 기준으로 분리, 빈 항목 제거, 최대 3줄
-    jibun_raw = row_data['지분율'] if '지분율' in row_data.index else ''
-    if pd.isna(jibun_raw) if isinstance(jibun_raw, float) else False:
-        jibun_raw = ''
-
-    parts = [p.strip() for p in str(jibun_raw).split('/') if p.strip()]
+    jibun_raw = '' if 지분율값 is None else str(지분율값)
+    parts = [p.strip() for p in jibun_raw.split('/') if p.strip()]
     if parts:
         html_lines = '<br>'.join(
             f'<span style="font-size:11px;color:#333;">{p}</span>'
