@@ -142,15 +142,13 @@ def on_interest_pills(stock_name):
     save_data("interest", stock_name, new_val)
 
 # ─────────────────────────────────────────
-# 통합 수급 함수
+# 네이버 수급 페이지 파싱 헬퍼
 # ─────────────────────────────────────────
-@st.cache_data(ttl=6000)
-def fetch_supply_data(stock_name, stock_code, df_json):
-    excel_df = pd.read_json(StringIO(df_json), dtype={'종목코드': str})
-
+def _fetch_naver_frgn_page(stock_code, page):
+    """네이버 외국인 수급 페이지 1개를 DataFrame으로 반환"""
     headers = {"User-Agent": "Mozilla/5.0"}
     res = requests.get(
-        f'https://finance.naver.com/item/frgn.naver?code={stock_code}',
+        f'https://finance.naver.com/item/frgn.naver?code={stock_code}&page={page}',
         headers=headers
     )
     try:
@@ -168,7 +166,23 @@ def fetch_supply_data(stock_name, stock_code, df_json):
     if fk['보유율'].dtype == 'O':
         fk['보유율'] = fk['보유율'].str.replace('%','').astype(float)
 
-    dk = fk.head(10).reset_index(drop=True)
+    return fk.reset_index(drop=True)
+
+# ─────────────────────────────────────────
+# 통합 수급 함수  ★ page=1, page=2 분리 ★
+# ─────────────────────────────────────────
+@st.cache_data(ttl=6000)
+def fetch_supply_data(stock_name, stock_code, df_json):
+    excel_df = pd.read_json(StringIO(df_json), dtype={'종목코드': str})
+
+    # ── page=1 (최근 1M) / page=2 (이전 2M) ──────────────
+    fk_p1 = _fetch_naver_frgn_page(stock_code, 1)   # 최근 데이터
+    fk_p2 = _fetch_naver_frgn_page(stock_code, 2)   # 이전 데이터
+
+    # 기존 로직에서 사용하던 fk → page=1 데이터 기준
+    fk = fk_p1.copy()
+
+    dk = fk.head(10).reset_index(drop=True)   # 수급 테이블 표시용 (10행)
 
     target = excel_df[excel_df['종목코드'] == stock_code].iloc[0]
     m_rank = target['순위']
@@ -191,6 +205,7 @@ def fetch_supply_data(stock_name, stock_code, df_json):
         st.warning(f"MongoDB 연결 오류: {e}")
         db_df = pd.DataFrame()
 
+    # plot_df: page=1 기준으로 구성
     plot_df = dk[['날짜','종가','보유율']].copy()
     plot_df['보유율'] = plot_df['보유율'].astype(str).str.replace('%','').astype(float)
     plot_df['날짜']   = pd.to_datetime(plot_df['날짜'])
@@ -210,7 +225,7 @@ def fetch_supply_data(stock_name, stock_code, df_json):
     else:
         merged = plot_df.sort_values('날짜').reset_index(drop=True)
 
-    return info1, info3, dk, merged
+    return info1, info3, dk, merged, fk_p1, fk_p2
 
 # ─────────────────────────────────────────
 # 보유율 & 종가 그래프
@@ -350,9 +365,9 @@ if not ts.empty:
         ts['Change'].iloc[-3] * 100,
     ]
 
-# 수급 데이터
+# 수급 데이터  ★ fk_p1, fk_p2 추가 반환 ★
 df_json = df.to_json()
-info1, info3, info4, plot_df = fetch_supply_data(item, code, df_json)
+info1, info3, info4, plot_df, fk_p1, fk_p2 = fetch_supply_data(item, code, df_json)
 
 if CC:
     vol_3d = [
@@ -556,6 +571,41 @@ with tab1:
 
 with tab2:
     plot_stock_st(plot_df, item)
+
+    # ─────────────────────────────────────────
+    # ★ 1M / 2M 구간별 수급 요약 DataFrame ★
+    # fk_p1 = page=1 (최근 1M), fk_p2 = page=2 (이전 2M)
+    # ─────────────────────────────────────────
+
+    def _prepare_summary_df(fk_raw):
+        """수급 DataFrame을 display용으로 변환 (단위: 천주)"""
+        df_tmp = fk_raw[['외국인','기관','개인']].copy()
+        for c in ['외국인','기관','개인']:
+            df_tmp[c] = pd.to_numeric(df_tmp[c], errors='coerce') / 1000
+        return df_tmp
+
+    p1_df = _prepare_summary_df(fk_p1)
+    p2_df = _prepare_summary_df(fk_p2)
+
+    sum_labels_m = ['외국인','기관','개인']
+
+    monthly_data = []
+    for title, grp in [("1M", p1_df), ("2M", p2_df)]:
+        r = {'구간': title}
+        for label in sum_labels_m:
+            r[label] = grp[label].sum()
+        monthly_data.append(r)
+
+    monthly_df = pd.DataFrame(monthly_data).set_index('구간')
+
+    def color_val_m(val):
+        color = "#0000FF" if val > 0 else "#FF0000" if val < 0 else "#000000"
+        return f'color: {color}'
+
+    st.dataframe(
+        monthly_df.style.map(color_val_m).format("{:,.0f}"),
+        use_container_width=True
+    )
 
 # ─────────────────────────────────────────
 # 메모
