@@ -56,7 +56,7 @@ keys1 = {
     '국내금' :'https://ssl.pstatic.net/imgfinance/chart/marketindex/area/month/CMDT_GC.png',
     '구리' : 'https://ssl.pstatic.net/imgfinance/chart/marketindex/area/month/CMDT_CDY.png',
     '일본중시': 'https://ssl.pstatic.net/imgfinance/chart/world/month3/NII@NI225.png?',
-    '상해증시' : 'hhttps://ssl.pstatic.net/imgfinance/chart/world/month3/SHS@000001.png?1778972937853',
+    '상해증시' : 'hhttps://ssl.pstatic.net/imgfinance/chart/world/month3/SHS@000001.png?',
     '인도증시'  : 'https://ssl.pstatic.net/imgfinance/chart/world/month3/INI@BSE30.png'}
 
 items = list(keys1.items()) # (이름, URL) 튜플 리스트로 변환
