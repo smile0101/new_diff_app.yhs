@@ -58,7 +58,7 @@ def showV_plotly(item, code):
             dd['MA10_d'] = dd['MA10'].diff()
             dd['S5'] = np.degrees(np.arctan(np.gradient(dd['MA5'].values)))
             dd['S10'] = np.degrees(np.arctan(np.gradient(dd['MA10'].values)))
-            return dd.tail(35).copy()
+            return dd.tail(30).copy()
 
         except : print(item)
 
@@ -131,7 +131,7 @@ def showV_plotly(item, code):
             cha = conf['T']
 
             if d_len > offset:  
-                k = 35 - offset          
+                k = 30 - offset          
                 x_pos = d['Date'].iloc[k]
                 x_end = d['Date'].iloc[k+5]
                 target_price = d['Close'].iloc[k] # 마커가 찍힐 해당 날짜의 종가  
