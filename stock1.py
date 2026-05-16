@@ -45,14 +45,14 @@ code = st.session_state['selected_code']
 def showV_plotly(item, code):
     def load_data(code):
         try :
-            dd = fdr.DataReader(code).tail(150).reset_index()
+            dd = fdr.DataReader(code).tail(200).reset_index()
             if 'index' in dd.columns:
                 dd = dd.rename(columns={'index': 'Date'})
             if 'Change' in dd.columns:
                 dd['Change'] = round(dd['Change'] * 100, 2)
             else:
                 dd['Change'] = round(dd['Close'].pct_change() * 100, 2)
-            for n in [5, 10, 20, 60]:
+            for n in [5, 10, 20, 60, 120]:
                 dd[f'MA{n}'] = dd['Close'].rolling(window=n).mean()
             dd['MA5_d'] = dd['MA5'].diff()
             dd['MA10_d'] = dd['MA10'].diff()
