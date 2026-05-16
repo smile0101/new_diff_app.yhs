@@ -10,6 +10,10 @@ import FinanceDataReader as fdr
 from urllib.parse import quote
 import matplotlib.font_manager as fm
 import koreanize_matplotlib
+import numpy as np
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from scipy.signal import find_peaks
 
 matplotlib.rcParams['axes.unicode_minus'] = False
 
@@ -636,3 +640,153 @@ memo_val = st.text_area(
 
 if st.button("💾 메모 저장", key=f"btn_memo_{item}"):
     save_data("memos", item, memo_val)
+
+# ─────────────────────────────────────────
+# Plotly 차트
+# ─────────────────────────────────────────
+@st.cache_data(ttl=600)
+def showV_plotly(stock_name, stock_code):
+    def load_data(code):
+        try:
+            dd = fdr.DataReader(code).tail(200).reset_index()
+            if 'index' in dd.columns:
+                dd = dd.rename(columns={'index': 'Date'})
+            if 'Change' in dd.columns:
+                dd['Change'] = round(dd['Change'] * 100, 2)
+            else:
+                dd['Change'] = round(dd['Close'].pct_change() * 100, 2)
+            for n in [5, 10, 20, 60, 120]:
+                dd[f'MA{n}'] = dd['Close'].rolling(window=n).mean()
+            dd['MA5_d']  = dd['MA5'].diff()
+            dd['MA10_d'] = dd['MA10'].diff()
+            dd['S5']  = np.degrees(np.arctan(np.gradient(dd['MA5'].values)))
+            dd['S10'] = np.degrees(np.arctan(np.gradient(dd['MA10'].values)))
+            return dd.tail(30).copy()
+        except Exception:
+            print(stock_name)
+            return None
+
+    d = load_data(stock_code)
+    if d is None or d.empty:
+        return None
+
+    d_max = d['Close'].max()
+    d_min = d['Close'].min()
+    dgap  = (d_max - d_min) / d_min * 100
+
+    fig = make_subplots(
+        rows=4, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.01,
+        row_heights=[0.4, 0.2, 0.2, 0.2],
+        specs=[
+            [{"secondary_y": True}],
+            [{"secondary_y": False}],
+            [{"secondary_y": True}],
+            [{"secondary_y": True}],
+        ]
+    )
+
+    # Chart 1: Price + Change bar
+    fig.add_trace(go.Scatter(x=d['Date'], y=d['Close'], name='Close', line=dict(color='blue', width=3)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=d['Date'], y=d['High'],  name='High',  line=dict(color='red',   width=2, dash='dash')), row=1, col=1)
+    fig.add_trace(go.Scatter(x=d['Date'], y=d['Low'],   name='Low',   line=dict(color='green', width=2, dash='dash')), row=1, col=1)
+    fig.add_trace(go.Bar(x=d['Date'], y=d['Change'], name='Change(%)', marker_color='rgba(150,150,150,0.3)'), row=1, col=1, secondary_y=True)
+
+    d_len = len(d)
+    if d_len > 20:
+        configs = [
+            {'days': 20, 'T': 1,  'm_color': '#FF5733', 'line_color': 'red'},
+            {'days': 40, 'T': 20, 'm_color': '#33FF57', 'line_color': 'green'},
+            {'days': 60, 'T': 40, 'm_color': '#3357FF', 'line_color': 'blue'},
+        ]
+        for conf in configs:
+            offset = conf['days']
+            cha    = conf['T']
+            if d_len > offset:
+                k            = 30 - offset
+                x_pos        = d['Date'].iloc[k]
+                x_end        = d['Date'].iloc[k + 5]
+                target_price = d['Close'].iloc[k]
+                d_sub  = d.iloc[-offset:-cha]
+                p_max  = d_sub['Close'].max()
+                p_min  = d_sub['Close'].min()
+                gap_pct = (p_max - p_min) / p_min * 100
+                for y_val in [p_max, p_min]:
+                    fig.add_shape(type="line",
+                        x0=x_pos, y0=y_val, x1=x_end, y1=y_val,
+                        line=dict(color=conf['line_color'], width=1, dash="dot"),
+                        row=1, col=1)
+                fig.add_annotation(
+                    x=x_pos, y=p_max, ax=x_pos, ay=p_min,
+                    xref="x1", yref="y1", axref="x1", ayref="y1",
+                    text="", showarrow=True,
+                    arrowhead=3, arrowsize=1, arrowwidth=1.5, arrowcolor=conf['line_color'],
+                    row=1, col=1)
+                fig.add_annotation(
+                    x=x_pos, y=target_price,
+                    xref="x1", yref="y1",
+                    text=f"{gap_pct:.0f}%",
+                    showarrow=False,
+                    font=dict(size=18, color=conf['line_color']),
+                    bgcolor="white", bordercolor=conf['line_color'],
+                    borderwidth=1, borderpad=2,
+                    row=1, col=1)
+
+    fig.add_annotation(x=d['Date'].iloc[1], y=d_max, text=f" Max {int(d_max):,}",
+        showarrow=False, yanchor="bottom", xanchor="left", font=dict(size=16), row=1, col=1)
+    fig.add_annotation(x=d['Date'].iloc[1], y=d_min, text=f" Min {int(d_min):,}",
+        showarrow=False, yanchor="top", xanchor="left", font=dict(size=16), row=1, col=1)
+    fig.add_annotation(
+        x=d['Date'].iloc[1], y=(d_max + d_min) / 2, text=f"{dgap:.0f}%",
+        showarrow=False, font=dict(size=18, color='black'),
+        bgcolor="yellow", bordercolor='black', borderwidth=1, borderpad=2, row=1, col=1)
+
+    # Chart 2: MA + peaks/valleys
+    ma_colors = {'MA5': 'green', 'MA20': 'magenta', 'MA60': 'blue', 'MA120': 'darkgray'}
+    for ma, color in ma_colors.items():
+        fig.add_trace(go.Scatter(x=d['Date'], y=d[ma], name=ma, line=dict(color=color, width=2)), row=2, col=1)
+    fig.add_trace(go.Scatter(x=d['Date'], y=d['Close'], name='Close2', line=dict(color='black', width=1.5, dash='dash')), row=2, col=1)
+    peaks,   _ = find_peaks(d['Close'])
+    valleys, _ = find_peaks(-d['Close'])
+    fig.add_trace(go.Scatter(x=d['Date'].iloc[peaks],   y=d['Close'].iloc[peaks],   mode='markers', marker=dict(color='red',    size=14), name='Peaks'),   row=2, col=1)
+    fig.add_trace(go.Scatter(x=d['Date'].iloc[valleys], y=d['Close'].iloc[valleys], mode='markers', marker=dict(color='purple', size=14), name='Valleys'), row=2, col=1)
+
+    # Chart 3: MA5 / MA10 + MA5 Diff bar
+    fig.add_trace(go.Scatter(x=d['Date'], y=d['MA5'],  name='MA5',  line=dict(color='red')),  row=3, col=1)
+    fig.add_trace(go.Scatter(x=d['Date'], y=d['MA10'], name='MA10', line=dict(color='blue')), row=3, col=1)
+    fig.add_trace(go.Bar(
+        x=d['Date'], y=d['MA5_d'], name='MA5 Diff',
+        marker_color=['royalblue' if v >= 0 else 'salmon' for v in d['MA5_d']],
+        opacity=0.6
+    ), row=3, col=1, secondary_y=True)
+
+    # Chart 4: Angle (S5, S10)
+    d['S5_detail']  = d['S5'].clip(lower=89.7)
+    d['S10_detail'] = d['S10'].clip(lower=89.7)
+    fig.add_trace(go.Scatter(x=d['Date'], y=d['Close'],     name='Close_Shadow', line=dict(color='black', width=1), opacity=0.4), row=4, col=1)
+    fig.add_trace(go.Scatter(x=d['Date'], y=d['S5_detail'],  name='S5 (Angle)',  line=dict(color='magenta', dash='dashdot')), row=4, col=1, secondary_y=True)
+    fig.add_trace(go.Scatter(x=d['Date'], y=d['S10_detail'], name='S10 (Angle)', line=dict(color='blue',    dash='dash')),    row=4, col=1, secondary_y=True)
+
+    fig.update_layout(
+        height=900,
+        title_text=f"📊 {stock_name}({stock_code})",
+        showlegend=False,
+        template="plotly_white",
+        margin=dict(l=50, r=50, t=30, b=60),
+    )
+    fig.update_xaxes(
+        tickangle=-45, tickformat="%m.%d",
+        tickfont=dict(color="black", size=12, family="Arial"),
+        row=4, col=1
+    )
+    fig.update_yaxes(range=[89.68, 90.03], row=4, col=1, secondary_y=True)
+
+    return fig
+
+st.divider()
+fig_plotly = showV_plotly(item, code)
+if fig_plotly:
+    st.plotly_chart(fig_plotly, use_container_width=True)
+else:
+    st.error("Plotly 차트 데이터를 불러올 수 없습니다.")
