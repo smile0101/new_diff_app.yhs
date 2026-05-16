@@ -578,8 +578,12 @@ with tab2:
     # ─────────────────────────────────────────
 
     def _prepare_summary_df(fk_raw):
-        """수급 DataFrame을 display용으로 변환 (단위: 천주)"""
-        df_tmp = fk_raw[['외국인','기관','개인']].copy()
+        """수급 DataFrame을 display용으로 변환 (단위: 천주, 등락률 %)"""
+        df_tmp = fk_raw[['등락률','외국인','기관','개인']].copy()
+        # 등락률: '%' 제거 후 float
+        df_tmp['등락률'] = (df_tmp['등락률'].astype(str)
+                            .str.replace('%','', regex=False)
+                            .astype(float))
         for c in ['외국인','기관','개인']:
             df_tmp[c] = pd.to_numeric(df_tmp[c], errors='coerce') / 1000
         return df_tmp
@@ -587,7 +591,7 @@ with tab2:
     p1_df = _prepare_summary_df(fk_p1)
     p2_df = _prepare_summary_df(fk_p2)
 
-    sum_labels_m = ['외국인','기관','개인']
+    sum_labels_m = ['등락률','외국인','기관','개인']
 
     monthly_data = []
     for title, grp in [("1M", p1_df), ("2M", p2_df)]:
